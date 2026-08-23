@@ -4,6 +4,21 @@ Yabumi is a single-file, self-contained scripting language for Agent Skills (scr
 
 Design priorities, in order: **zero-dependency distribution > machine-readable errors > write-it-right-the-first-time > permission auditability**. The overarching philosophy is "**what you see is what happens**" -- eliminating implicit behavior and making concurrency, mutability, and error propagation all visible in the syntax. See [`SPEC.md`](./SPEC.md) for the full language specification.
 
+## Install
+
+### Homebrew
+
+```sh
+brew install smartcrabai/tap/yabumi
+```
+
+### Shell installer
+
+```sh
+curl --proto '=https' --tlsv1.2 -LsSf \
+  https://github.com/smartcrabai/yabumi/releases/latest/download/yabumi-installer.sh | sh
+```
+
 ## Build
 
 ```sh
