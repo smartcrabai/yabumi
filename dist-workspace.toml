@@ -5,6 +5,8 @@ members = ["cargo:."]
 [dist]
 # The preferred dist version to use in CI (Cargo.toml SemVer syntax)
 cargo-dist-version = "0.32.0"
+# Allow Renovate to manage action versions in generated CI files
+allow-dirty = ["ci"]
 # CI backends to support
 ci = "github"
 # Path that installers should place binaries in

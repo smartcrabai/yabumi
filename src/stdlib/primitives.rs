@@ -19,7 +19,7 @@ const I64_MAX_BOUND_AS_F64: f64 = 9_223_372_036_854_775_808.0;
 /// (integer overflow).
 pub fn int_from_float(x: f64, span: Span) -> Result<Value, Abort> {
     let truncated = x.trunc();
-    if !truncated.is_finite() || truncated < I64_MIN_AS_F64 || truncated >= I64_MAX_BOUND_AS_F64 {
+    if !truncated.is_finite() || !(I64_MIN_AS_F64..I64_MAX_BOUND_AS_F64).contains(&truncated) {
         return Err(panic::overflow(span));
     }
     #[expect(
@@ -64,7 +64,7 @@ fn format_float(x: f64) -> String {
         };
     }
     let abs = x.abs();
-    if abs != 0.0 && (abs >= 1e16 || abs < 1e-4) {
+    if abs != 0.0 && !(1e-4..1e16).contains(&abs) {
         return format!("{x:e}");
     }
     let plain = format!("{x}");
