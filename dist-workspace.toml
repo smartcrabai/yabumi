@@ -25,3 +25,6 @@ targets = [
 ]
 # Whether to install an updater program
 install-updater = false
+
+[dist.github-custom-runners]
+aarch64-pc-windows-msvc = "windows-11-arm"
