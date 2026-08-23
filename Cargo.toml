@@ -1,7 +1,8 @@
 [package]
 default-run = "ybm"
-description = ""
+description = "A self-contained scripting language for Agent Skills"
 edition = "2024"
+homepage = "https://github.com/smartcrabai/yabumi"
 license = "MIT"
 name = "yabumi"
 repository = "https://github.com/smartcrabai/yabumi"
@@ -10,21 +11,6 @@ version = "0.1.0"
 [features]
 default = []
 test-fixtures = []
-
-[workspace.metadata.dist]
-cargo-dist-version = ""
-ci = "github"
-install-path = "CARGO_HOME"
-installers = ["shell", "homebrew"]
-publish-jobs = ["homebrew"]
-tap = "smartcrabai/homebrew-tap"
-targets = [
-  "aarch64-apple-darwin",
-  "x86_64-unknown-linux-gnu",
-  "aarch64-unknown-linux-gnu",
-  "x86_64-pc-windows-msvc",
-  "aarch64-pc-windows-msvc",
-]
 
 [[bin]]
 name = "ybm"

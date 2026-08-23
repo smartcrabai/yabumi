@@ -11,6 +11,22 @@ cargo build --release
 # produces ./target/release/ybm
 ```
 
+## Release
+
+One-time setup: add a `HOMEBREW_TAP_TOKEN` repository secret with write access to
+`smartcrabai/homebrew-tap`.
+
+For each release, update the version in `Cargo.toml`, merge it into `main`, then
+push the matching tag:
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The release workflow builds archives for all configured targets, creates the
+GitHub Release and shell installer, then updates the Homebrew tap.
+
 ## CLI
 
 There are only three subcommands.
