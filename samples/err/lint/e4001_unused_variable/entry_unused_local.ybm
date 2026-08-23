@@ -1,0 +1,10 @@
+# Verifies: SPEC §12 (lint), DECISIONS D-LINT-01 (unused variable E4001)
+# The local binding x is never referenced inside compute(), so verifies that E4001 is reported once.
+# n is exempt because it's used in the return statement. compute itself is called from
+# the trailing print, so it is not a D-LINT-02 (unused function E4002) target.
+
+def compute(n: int): int
+    x = n * 2
+    return n + 1
+
+print(compute(3))

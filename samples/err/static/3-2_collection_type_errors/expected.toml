@@ -1,0 +1,47 @@
+[[case]]
+id = "check_heterogeneous_list_literal"
+entry = "entry_heterogeneous_list_literal.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1010"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "A list literal mixing int/str cannot unify its element type, producing E1010 (D-TYPE-04)."
+
+[[case]]
+id = "check_dict_key_type_not_allowed"
+entry = "entry_dict_key_type_not_allowed.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1011"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "float is not among the allowed dict key types, producing E1011 (D-TYPE-05)."
+
+[[case]]
+id = "check_set_element_type_not_allowed"
+entry = "entry_set_element_type_not_allowed.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1012"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "list is not among the allowed set element types, producing E1012 (D-TYPE-05)."

@@ -1,0 +1,43 @@
+#!/usr/bin/env ybm
+
+# An adaptation of the SPEC §15 sample body (the version that runs and verifies).
+# Instead of the network, uses deterministic literal Result[list[Repo], Error] data,
+# and actually runs and asserts the filter/flat_map/sort_by/rev/take pipeline, the
+# dict wrap via {"repos": top} (D-STDPOL-09), toml.encode, fs.write, and the
+# decode(encode(x)) round-trip (SAMPLES_PLAN.md §2 pattern 3, following section 1.4's determinism policy).
+#
+# Data prepared: models alice returning a Repo with Ok([50, 150]) stars, bob returning
+# an Err (equivalent to a timeout), and carol returning Ok([300, 120]) stars.
+# Expected transformation process:
+# 1. Filter by is_ok -> only alice's and carol's Ok remain (bob's Err is dropped)
+# 2. flat_map with unwrap_or([]) -> [a1(50), a2(150), c1(300), c2(120)]
+# 3. Filter by stars > 100 -> [a2(150), c1(300), c2(120)]
+# 4. sort_by stars ascending -> [c2(120), a2(150), c1(300)]
+# 5. rev -> [c1(300), a2(150), c2(120)]
+# 6. take(10) -> stays as-is since the element count is under 10: [c1(300), a2(150), c2(120)]
+
+alice_repos: Result[list[Repo], Error] = Ok([Repo(name: "a1", stars: 50), Repo(name: "a2", stars: 150)])
+bob_repos: Result[list[Repo], Error] = Err(Error(kind: "net", message: "timeout", cause: None))
+carol_repos: Result[list[Repo], Error] = Ok([Repo(name: "c1", stars: 300), Repo(name: "c2", stars: 120)])
+
+results = [alice_repos, bob_repos, carol_repos]
+
+top = results
+    .filter((r) => r.is_ok())
+    .flat_map((r) => r.unwrap_or([]))
+    .filter((repo) => repo.stars > 100)
+    .sort_by((repo) => repo.stars)
+    .rev()
+    .take(10)
+
+assert(top == [Repo(name: "c1", stars: 300), Repo(name: "a2", stars: 150), Repo(name: "c2", stars: 120)], "filter(is_ok)+flat_map(unwrap_or)+filter(stars>100)+sort_by(stars)+rev+take should reproduce the expected ranking")
+
+report: dict[str, list[Repo]] = {"repos": top}
+write_err = report |> toml.encode |> fs.write("_out/top.toml", _)
+assert(write_err.is_none(), "fs.write should succeed when writing the wrapped toml report")
+
+read_back = fs.read("_out/top.toml")?
+decoded: dict[str, list[Repo]] = toml.decode(read_back)?
+assert(decoded == report, "decode(encode(report)) must round-trip back to the original report")
+
+print(f"done: {top.count()} repos")

@@ -1,0 +1,31 @@
+# Verifies SPEC.md §3.6's generics.
+# Asserts a user-defined generic function's monomorphization (bound to a concrete type
+# at each call site, D-FUNC-04), and using an explicit type argument f[Type](...) for
+# the case where a type variable appears only in the return type and cannot be inferred
+# from an argument (D-TYPE-15 item 3, D-FUNC-04).
+
+## Exactly SPEC §3.6's example: returns the list's first element (None if empty).
+def first[T](xs: list[T]): Option[T]
+    return xs.get(0)
+
+## Creates an empty list of type T. T appears only in the return type, and since there are no arguments, it can't be inferred from an actual argument.
+def empty_list[T](): list[T]
+    xs: list[T] = []
+    return xs
+
+ints = [1, 2, 3]
+strs = ["a", "b"]
+empty: list[int] = []
+
+first_int = first(ints)
+first_str = first(strs)
+first_empty = first(empty)
+assert(first_int.unwrap() == 1)
+assert(first_str.unwrap() == "a")
+assert(first_empty.is_none())
+
+ys = empty_list[int]()
+zs = empty_list[str]()
+assert(ys.is_empty())
+assert(ys.len() == 0)
+assert(zs.is_empty())

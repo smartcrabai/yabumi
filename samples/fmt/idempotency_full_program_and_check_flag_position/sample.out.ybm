@@ -1,0 +1,40 @@
+#!/usr/bin/env ybm
+# Total amount calculation script
+
+## Computes the total amount from the qty/price pairs.
+def compute_total(qty_list: list[int], price_list: list[float]): float
+    pairs = qty_list.zip(price_list)
+    total = pairs.fold(0.0, (acc, p) => acc + float(p.0) * p.1)
+    return total
+
+def shout(s: str): str
+    return s.to_upper()
+
+struct LineItem
+    name: str
+    qty: int
+    price: float
+
+    def subtotal(self): float
+        return float(self.qty) * self.price
+
+items = [
+    LineItem(name: "pen", qty: 3, price: 1.5),
+    LineItem(name: "cup", qty: 2, price: 4.0),
+]
+
+qtys = items.map((i) => i.qty)
+prices = items.map((i) => i.price)
+
+grand_total = compute_total(qtys, prices)
+
+report = grand_total |> str |> shout
+
+subtotal_sum = items
+    .map((i) => i.subtotal())
+    .sum()
+
+assert(grand_total == 12.5)
+assert(subtotal_sum == 12.5)
+
+print(f"total: {report}")

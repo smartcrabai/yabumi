@@ -1,0 +1,17 @@
+# Regression: the canonical SPEC §15 list[Repo] root remains encodable.
+
+[[case]]
+id = "run_toml_encode_list_root"
+entry = "entry_toml_encode_list_root.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "contains", value = "value = [" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "SPEC §15 passes list[Repo] directly to toml.encode; this remains supported."

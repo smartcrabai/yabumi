@@ -1,0 +1,55 @@
+# Expected results for fmt/collection_and_call_arg_line_splitting
+# Verifies: SPEC §3.2/§12, DECISIONS D-FMT-05 (a list/dict/set/tuple literal or
+# function-call argument list expands to 1 line per element if there is at least 1
+# newline between its opening and closing bracket, and stays on a single line if there
+# is none). D-TYPE-02's trailing-comma rule also applies after expansion. The
+# fmt(fmt(x)) = fmt(x) idempotency (D-FMT-05's rationale note) is also confirmed by rerunning
+# check_diff on sample.out.ybm.
+
+[[case]]
+id = "check_splits_only_newline_triggered_literals_and_calls"
+entry = "sample.in.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = "sample.out.ybm"
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Among list/dict/set/tuple literals and function-call argument lists, only those containing a newline between the opening and closing bracket (multi_trigger_*) are expanded to 1 line per element with a trailing comma added. Those with no newline (single_line_*) stay on a single line, with only the space after each comma normalized (D-FMT-05)."
+
+[[case]]
+id = "check_diff_detects_pending_split"
+entry = "sample.in.ybm"
+cmd = "check_diff"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = []
+fmt_diff_expected = true
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "ybm check --check judges the non-canonical form as having a diff and exits 1 (D-CLI-02)."
+
+[[case]]
+id = "check_diff_idempotent_on_canonical_form"
+entry = "sample.out.ybm"
+cmd = "check_diff"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Against sample.out.ybm, already in canonical form (expanded multi_trigger_* plus single-line single_line_*), there is no diff. Confirms the fmt(fmt(x)) = fmt(x) idempotency (D-FMT-05's rationale note) through the output being deterministic, independent of whether the input contained a newline."

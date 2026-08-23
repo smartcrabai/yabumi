@@ -1,0 +1,30 @@
+#!/usr/bin/env ybm
+
+# SPEC 11.1 / STDLIB 4.2 verification: for csv, decode[T] requires explicit T, matching
+# names against the header row, encode, and the dynamic decode_rows for when T is unknown (every cell is Value.Str).
+
+struct User
+    name: str
+    age: int
+
+csv_input = "name,age\nalice,30\nbob,25\n"
+
+users: list[User] = csv.decode[User](csv_input)?
+assert(users.count() == 2)
+assert(users.get(0).unwrap().name == "alice")
+assert(users.get(0).unwrap().age == 30)
+assert(users.get(1).unwrap().name == "bob")
+assert(users.get(1).unwrap().age == 25)
+
+encoded_csv = csv.encode(users)
+assert(encoded_csv.contains("name,age"))
+assert(encoded_csv.contains("alice,30"))
+assert(encoded_csv.contains("bob,25"))
+
+rows: list[dict[str, Value]] = csv.decode_rows(csv_input)?
+assert(rows.count() == 2)
+first_row = rows.get(0).unwrap()
+assert(first_row.get("name").unwrap().as_str().unwrap() == "alice")
+assert(first_row.get("age").unwrap().as_str().unwrap() == "30")
+
+print("csv decode+encode ok")

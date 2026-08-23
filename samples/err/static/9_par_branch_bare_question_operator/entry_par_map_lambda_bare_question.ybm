@@ -1,0 +1,16 @@
+#!/usr/bin/env ybm
+# Verifies: SPEC §7.2 (`?`'s scope is the innermost function), §9 (`xs.par_map((x) => ...)`)
+# Decisions: DECISIONS D-PAR-03 (a bare `?` inside the lambda body passed to `par_map` is likewise forbidden, E0502)
+#
+# Writes `?` directly inside the lambda body, as in `inputs.par_map((s) =>
+# parse_code(s)?)`. A bare `?` is syntactically forbidden even inside a lambda body
+# passed to a par-family higher-order function; verifies that this reports E0502.
+
+def parse_code(s: str): Result[int, str]
+    return match s
+        "bad" => Err("invalid")
+        _ => Ok(1)
+
+inputs = ["1", "2", "3"]
+results = inputs.par_map((s) => parse_code(s)?)
+print(results.len())

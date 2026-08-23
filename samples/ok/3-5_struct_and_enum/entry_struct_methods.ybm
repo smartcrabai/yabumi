@@ -1,0 +1,23 @@
+# SPEC §3.5: verifies a struct that combines methods (a non-var-self read and a
+# var-self mutation), plus named-argument construction and field access
+# Referenced decisions: D-MUT-01 (var self is required for a mutating method; the
+# caller must also have a var binding)
+# D-MUT-02 (var self is the sole exception to value semantics) / D-TYPE-13 (struct construction requires named arguments)
+
+struct Counter
+    label: str
+    value: int
+
+    def describe(self): str
+        return f"{self.label}={self.value}"
+
+    def increment(var self, amount: int): void
+        self.value = self.value + amount
+
+var c = Counter(label: "hits", value: 0)
+assert(c.describe() == "hits=0")
+c.increment(3)
+assert(c.value == 3)
+assert(c.describe() == "hits=3")
+c.increment(2)
+assert(c.value == 5)

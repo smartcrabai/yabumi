@@ -1,0 +1,51 @@
+# Verifies: SPEC §7.4 / DECISIONS D-ERR-04 items 1 and 2, D-DIAG-02 (E6001)
+# Confirms that out-of-range/missing-key access on a list/dict, and an out-of-range
+# specification to list.slice, all terminate immediately with E6001.
+
+[[case]]
+id = "list_index_oob"
+entry = "entry_list_index_oob.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E6001"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E6001]" }
+doc_blocks = []
+requires_env = []
+notes = "Confirms that the out-of-range index access xs[idx] (idx=5, xs.len()=3) terminates immediately with E6001."
+
+[[case]]
+id = "dict_missing_key"
+entry = "entry_dict_missing_key.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E6001"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E6001]" }
+doc_blocks = []
+requires_env = []
+notes = "Confirms that the access m[missing_key] (missing_key=\"z\" is a key not present in m) terminates immediately with E6001."
+
+[[case]]
+id = "slice_out_of_range"
+entry = "entry_slice_out_of_range.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E6001"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E6001]" }
+doc_blocks = []
+requires_env = []
+notes = "Confirms that the out-of-range specification xs.slice(1, 10) (end=10 exceeds xs.len()=3) terminates immediately with E6001."

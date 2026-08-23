@@ -1,0 +1,54 @@
+# Expected results for fmt/operator_and_punctuation_spacing
+# Verifies: SPEC §12, DECISIONS D-FMT-01 (spacing rules for binary operators, commas,
+# type-annotation colons, unary operators, and not)
+# sample.in.ybm and sample.out.ybm are programs with identical meaning, differing only
+# in spacing-rule violations (the diff was confirmed when this directory was created).
+# Assuming zero type/lint diagnostics, this verifies only fmt's normalization itself.
+
+[[case]]
+id = "check_normalizes_spacing"
+entry = "sample.in.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = "sample.out.ybm"
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "ybm check's in-place formatting result byte-matches sample.out.ybm (D-FMT-01). Zero type/lint diagnostics. Since the CLI's exact stdout wording is unspecified by SPEC/DECISIONS, stdout/stderr are handled loosely as contains \"\" (unconditionally true), and only exit_code / fmt_result_file are strictly verified."
+
+[[case]]
+id = "check_diff_detects_nonstandard_spacing"
+entry = "sample.in.ybm"
+cmd = "check_diff"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = []
+fmt_diff_expected = true
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "ybm check --check judges the non-canonical form as having a diff and exits 1 (D-CLI-02). No rewrite happens."
+
+[[case]]
+id = "check_diff_idempotent_on_canonical_form"
+entry = "sample.out.ybm"
+cmd = "check_diff"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Against sample.out.ybm, already in canonical form, there is no diff (fmt's idempotency, fmt(fmt(x)) = fmt(x), SPEC §12)."

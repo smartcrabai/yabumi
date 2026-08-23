@@ -1,0 +1,30 @@
+# Verifies the positive control for DECISIONS D-TYPE-18 (a non-enum scrutinee's match
+# exhaustiveness requirement).
+# Asserts that an int/str scrutinee is made exhaustive with a trailing wildcard `_`,
+# while a bool scrutinee is considered exhaustive with both the true/false arms (no wildcard).
+
+score = 72
+grade = match score
+    100 => "perfect"
+    0 => "zero"
+    _ => "normal"
+assert(grade == "normal")
+
+name = "bob"
+greeting = match name
+    "alice" => "hi alice"
+    "bob" => "hi bob"
+    _ => "hi stranger"
+assert(greeting == "hi bob")
+
+flag = true
+description = match flag
+    true => "on"
+    false => "off"
+assert(description == "on")
+
+flag2 = false
+description2 = match flag2
+    true => "on"
+    false => "off"
+assert(description2 == "off")

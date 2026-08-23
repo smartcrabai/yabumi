@@ -1,0 +1,6 @@
+# Verifies: SPEC §3.2 (collections) / D-TYPE-05 dict key / set element type constraints / D-DIAG-02 E1012
+# A set's T has the same constraint as a dict key (int/str/bool/allowed tuple). list is
+# forbidden as an element, producing E1012. Since no `:` follows the first element,
+# this is judged (per D-TYPE-03) to be a set literal.
+
+{[1, 2]}

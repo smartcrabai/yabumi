@@ -1,0 +1,15 @@
+[[case]]
+id = "run_ok"
+entry = "entry_main.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Asserts, in one file, a bare-name pipe (x |> double), a pipe requiring the _ placeholder (json_str |> fs.write(path, _)), and a pipe mixing in postfix ? per stage (\"8\" |> parse_positive? |> validate_even?). The fs effect is deterministic, writing only into the _out/ sandbox (SAMPLES_PLAN.md §1.4)."

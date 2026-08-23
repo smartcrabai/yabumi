@@ -1,0 +1,13 @@
+#!/usr/bin/env ybm
+
+# SPEC 10 verification: via same-directory auto-import, directly calls from this entry
+# both mod_constants.ybm's constants and mod_helpers.ybm's functions (which reference those constants).
+
+assert(max_retries == 3)
+assert(default_timeout_ms == 5000)
+assert(retries_exhausted(3))
+assert(not retries_exhausted(2))
+assert(greeting() == "hello from yabumi-sample")
+assert(total_delay_ms() == 700)
+
+print(greeting())

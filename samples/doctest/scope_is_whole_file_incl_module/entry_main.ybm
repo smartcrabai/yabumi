@@ -1,0 +1,14 @@
+# Verifies: SPEC §13, §10 / D-MOD-04
+# A doc test's scope is all declarations in the entry file plus same-directory modules
+# (D-MOD-04). Confirms that even though entry_main.ybm itself does not declare double,
+# a doc test block can directly call the double declared by the same-directory mod_helpers.ybm.
+
+## Calls the double declared by mod_helpers.ybm from a doc test block (D-MOD-04).
+##
+## ```
+## assert(double(21) == 42)
+## ```
+def describe_doubling(): str
+    return "doubles n to 2n"
+
+print(describe_doubling())

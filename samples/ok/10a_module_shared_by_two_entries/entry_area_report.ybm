@@ -1,0 +1,19 @@
+#!/usr/bin/env ybm
+
+# SPEC 10 verification: uses mod_shapes.ybm's struct/enum/functions to compute and print a list of areas.
+# D-MOD-01/03/04: files carrying a module directive in the same directory are auto-imported.
+
+shapes = [
+    NamedShape(name: "circle-a", shape: Circle(2.0)),
+    NamedShape(name: "rect-a", shape: Rect(3.0, 4.0)),
+    NamedShape(name: "circle-b", shape: Circle(1.0)),
+]
+
+areas = shapes.map((s) => area(s.shape))
+assert(areas.count() == 3)
+assert(areas.get(0).unwrap() == 3.14 * 2.0 * 2.0)
+assert(areas.get(1).unwrap() == 12.0)
+assert(areas.get(2).unwrap() == 3.14 * 1.0 * 1.0)
+
+names_report = shapes.map((s) => s.name).join(", ")
+print(f"areas computed for: {names_report}")

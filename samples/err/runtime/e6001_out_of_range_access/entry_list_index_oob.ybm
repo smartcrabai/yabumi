@@ -1,0 +1,7 @@
+# Verifies: SPEC §7.4 (no panics) / DECISIONS D-ERR-04 item 1
+# An out-of-range index access xs[i] on a list panics (E6001), uncatchable, and terminates immediately.
+# The safe version is xs.get(i): Option[T] (STDLIB.md §2.1, §14).
+
+xs = [1, 2, 3]
+idx = 5
+oob_value = xs[idx]

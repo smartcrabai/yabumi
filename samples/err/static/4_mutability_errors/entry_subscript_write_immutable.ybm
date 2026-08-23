@@ -1,0 +1,7 @@
+# Verifies: SPEC §4 (variables and mutability) / DECISIONS D-COL-02 (subscript assignment on list/dict) / D-DIAG-02 E3001
+# A subscript assignment `xs[i] = v` produces E3001 unless the target variable is a var
+# binding (D-COL-02: "a type error (E3001) unless the target variable is var").
+
+xs = [1, 2, 3]
+xs[0] = 99
+print(xs[0])

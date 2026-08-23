@@ -1,0 +1,10 @@
+module
+
+# Verifies SPEC 10 / D-MOD-02: a module-level constant may only be a literal (or a
+# combination of literals). An expression containing a function call is forbidden
+# (treated as an executable statement and a type error).
+
+max_retries = 3
+default_timeout_ms = 5000
+app_name = "yabumi-sample"
+retry_delays_ms = [100, 200, 400]

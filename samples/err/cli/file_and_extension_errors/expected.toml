@@ -1,0 +1,36 @@
+# Verifies: SPEC.md §1 (CLI) / DECISIONS.md D-CLI-04, D-DIAG-02 (E9001/E9002)
+# This directory covers only the 2 "pre-CLI-launch error" cases (file not found, invalid extension).
+# The E9001 case has no backing file; expected.toml directly names a nonexistent file
+# (following the err/cli special-case rule in SAMPLES_PLAN.md §1.3).
+
+[[case]]
+id = "run_wrong_extension"
+entry = "entry_wrong_extension.notybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E9002"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E9002]" }
+doc_blocks = []
+requires_env = []
+notes = "Passes a file whose extension is not `.ybm` to `ybm`. Even with correct content, it is rejected by the extension check and never runs (D-CLI-04)."
+
+[[case]]
+id = "run_file_not_found"
+entry = "entry_missing.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E9001"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E9001]" }
+doc_blocks = []
+requires_env = []
+notes = "Directly names a file that does not exist in the directory. Since the extension `.ybm` is correct, this verifies only E9001 (file not found). No backing file is created (the err/cli special case in SAMPLES_PLAN.md §1.3)."

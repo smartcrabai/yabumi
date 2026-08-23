@@ -1,0 +1,5 @@
+# Verifies: SPEC §7.5 (assert) / DECISIONS D-ERR-04 item 5, D-ERR-05
+# Calling assert(cond, msg) with a condition that is always false panics (E6004) and terminates immediately.
+# There is no safe version (this feature is meant to fail on purpose; STDLIB.md §14).
+
+assert(false, "this assertion always fails")

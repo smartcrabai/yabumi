@@ -1,0 +1,13 @@
+#!/usr/bin/env ybm
+# Verifies: SPEC §10 "no namespace separation (a single flat namespace); a name collision is a type error"
+# Decisions: DECISIONS.md D-TYPE-07 (every top-level identifier shares one flat namespace), D-MOD-05 (name-collision diagnostic format)
+#
+# entry_main.ybm alone is a correct definition, but the same-directory mod_util.ybm
+# (which carries a module directive) is auto-imported (D-MOD-01) and declares a
+# top-level function format_greeting with the same name, so E1001 fires as a name
+# collision in the single flat namespace (SPEC §10).
+
+def format_greeting(name: str): str
+    return f"hello, {name}"
+
+print(format_greeting("world"))

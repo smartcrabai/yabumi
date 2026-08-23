@@ -1,0 +1,15 @@
+[[case]]
+id = "run_ok"
+entry = "entry_main.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Asserts using xs.get/m.get/math.checked_div/checked_mod/checked_add/checked_sub/checked_mul, all returning Option, to avoid out-of-range access, division by zero, and overflow without the dangerous versions (D-STDPOL-08)."

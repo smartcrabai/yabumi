@@ -1,0 +1,15 @@
+#!/usr/bin/env ybm
+# Verifies: SPEC §7.3 (not using a Result return value is a type error; explicit discard is `_ = f()`)
+# Decisions: DECISIONS D-ERR-03 rule 1 (a Result expression written standalone as an
+#       expression statement is unused = E1040)
+#
+# `parse_code("42")` returns Result[int, str], but it's used in none of assignment,
+# return, argument, etc. -- it's discarded as a standalone expression statement.
+# Verifies that this reports E1040.
+
+def parse_code(s: str): Result[int, str]
+    return match s
+        "bad" => Err("invalid")
+        _ => Ok(1)
+
+parse_code("42")

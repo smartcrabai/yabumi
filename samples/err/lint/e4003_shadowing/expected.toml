@@ -1,0 +1,18 @@
+# Verifies: SPEC §12, DECISIONS D-LINT-03 (E4003 shadowing)
+# Follows the schema in SAMPLES_PLAN.md §1.3.
+
+[[case]]
+id = "check_reports_shadowing_in_four_scopes"
+entry = "entry_shadowing_various_scopes.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E4003", "E4003", "E4003", "E4003"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E4003]" }
+doc_blocks = []
+requires_env = []
+notes = "The 4 E4003s correspond to: (1) shadow_in_function_boundary's parameter value shadowing the top-level variable value; (2) check_if_shadow's var outer = 2 inside the if clause shadowing the function-scope outer (an explicit new binding via var, so it does not go through E3001, which would apply to a bare reassignment); (3) check_match_shadow's match arm item shadowing the function-scope item; (4) apply_lambda_shadow's lambda parameter factor shadowing the function-scope factor. Every shadowed and shadowing variable is referenced and used, so E4001 never fires."

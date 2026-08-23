@@ -1,0 +1,33 @@
+# SPEC §3.1: confirms that primitives' basic operations and the type-conversion round-trip invariant succeed.
+
+[[case]]
+id = "run_main_ok"
+entry = "entry_main.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Verifies int/float/bool/str arithmetic, ordering comparison, logical operators, and structural equality via assert only (no print/eprint)."
+
+[[case]]
+id = "run_conversion_roundtrip_ok"
+entry = "entry_conversion_roundtrip.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Verifies D-TYPE-14's conversion rules (int()'s truncation toward 0, the round-trip invariant of str(x) with parse_int/parse_float) via assert."

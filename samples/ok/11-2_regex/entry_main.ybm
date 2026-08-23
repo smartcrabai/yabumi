@@ -1,0 +1,34 @@
+#!/usr/bin/env ybm
+
+# SPEC 11.2 regex verification: is_match/find/find_all/replace/replace_all/captures
+# STDLIB.md §11 regex -- effect: none (pure). There is no dedicated Regex type;
+# a pattern is always passed as a str (D-STDPOL-07). Against a fixed pattern and fixed
+# input, calls each function once and asserts the Ok side's value of the Result.
+# No uses declaration is needed for a top-level statement (unneeded to begin with, since these are pure functions with no effect).
+
+text = "ab12cd34"
+digit_pattern = "[0-9]+"
+
+matched = regex.is_match(digit_pattern, text)?
+assert(matched, "digit_pattern should match somewhere in 'ab12cd34'")
+
+first = regex.find(digit_pattern, text)?
+assert(first.is_some(), "regex.find should find the first digit run")
+assert(first.unwrap() == "12", "the first digit run in 'ab12cd34' is '12'")
+
+all_matches = regex.find_all(digit_pattern, text)?
+assert(all_matches == ["12", "34"], "regex.find_all should find every digit run in order")
+
+replaced_first = regex.replace(digit_pattern, text, "#")?
+assert(replaced_first == "ab#cd34", "regex.replace should only replace the first match")
+
+replaced_all = regex.replace_all(digit_pattern, text, "#")?
+assert(replaced_all == "ab#cd#", "regex.replace_all should replace every match")
+
+group_pattern = "([a-z]+)([0-9]+)"
+caps = regex.captures(group_pattern, text)?
+assert(caps.is_some(), "group_pattern should match 'ab12cd34' and produce captures")
+groups = caps.unwrap()
+assert(groups == ["ab12", "ab", "12"], "captures index 0 is the whole match, followed by each capture group")
+
+print("regex sample done")

@@ -1,0 +1,8 @@
+# Verifies: SPEC §7.4 (no panics) / DECISIONS D-ERR-04 item 6
+# None.unwrap() panics (E6007) and terminates immediately.
+# The safe version is o.unwrap_or(default) (STDLIB.md §3.2, §14).
+
+def always_none(): Option[int]
+    return None
+
+unwrapped = always_none().unwrap()

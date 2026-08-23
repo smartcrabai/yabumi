@@ -1,0 +1,15 @@
+# Verifies: SPEC §2/§12, DECISIONS D-SYN-02
+# Confirms that consecutive blank lines are normalized to at most 1, and the file's
+# end is unified to exactly 1 trailing newline (no trailing blank lines).
+a = 1
+
+
+b = 2
+
+
+
+print(str(a))
+print(str(b))
+
+
+

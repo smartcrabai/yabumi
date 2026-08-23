@@ -1,0 +1,19 @@
+# Verifies: SPEC §6.3/§12, DECISIONS D-FMT-04
+# Confirms that a pipe with 2 or more stages is always split to 1 stage per line, while
+# a single-stage pipe (single) stays on the same line.
+def double(x: int): int
+    return x * 2
+
+def add_one(x: int): int
+    return x + 1
+
+def to_text(x: int): str
+    return str(x)
+
+single = 5 |> double
+chained = 5
+    |> double
+    |> add_one
+    |> to_text
+print(str(single))
+print(chained)

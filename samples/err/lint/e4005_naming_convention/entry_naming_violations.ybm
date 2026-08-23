@@ -1,0 +1,36 @@
+# Verifies: SPEC §12 (lint), DECISIONS D-LINT-05 (naming convention violation E4005)
+# Includes one violation each (6 total) for identifiers that require snake_case
+# (variables, functions, struct fields, function parameters) and identifiers that
+# require PascalCase (struct/enum type names, enum variant names).
+# As a contrast, shows that the generic type variables T and U in identity[T] /
+# pair_first[T, U] are exempt from the naming convention per D-LINT-05 (never reported as violations).
+
+struct point
+    x: int
+    Y: int
+
+enum Status
+    Active
+    inactive
+
+def ComputeArea(w: int, h: int): int
+    return w * h
+
+def greet(Name: str): str
+    return f"hello {Name}"
+
+def identity[T](x: T): T
+    return x
+
+def pair_first[T, U](a: T, b: U): tuple[T, U]
+    return (a, b)
+
+BadVariable = 1
+p = point(x: 1, Y: 2)
+
+print(BadVariable)
+print(p.x + p.Y)
+print(ComputeArea(3, 4))
+print(greet("world"))
+print(identity(5))
+pair_first(1, "x")

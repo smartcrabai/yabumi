@@ -1,0 +1,17 @@
+module
+
+# A shared module for verifying SPEC 10 / D-MOD-01/03/04.
+# Contains only declarations (struct/enum/function); writes no top-level executable statement at all (D-MOD-02).
+
+struct NamedShape
+    name: str
+    shape: Shape
+
+enum Shape
+    Circle(radius: float)
+    Rect(width: float, height: float)
+
+def area(shape: Shape): float
+    return match shape
+        Circle(r) => 3.14 * r * r
+        Rect(w, h) => w * h

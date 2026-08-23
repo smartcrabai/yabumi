@@ -1,0 +1,28 @@
+#!/usr/bin/env ybm
+# SPEC §2 (lexical): verifies the lexical rules for ignoring the shebang, mixing #/## comments, and 4-space-increment indentation
+# Referenced decisions: D-LEX-09 (only line 1's shebang is ignored, making the next line the effective line 1)
+# D-SYN-01 (indentation relative to the previous non-blank line must be same/+4/-4 or more, in increments of 4; a mixed-in tab is an immediate error)
+# D-SYN-03 (else must be at the same indent column as its matching if) / D-SYN-02 (a comment-only line is excluded from indentation comparison)
+
+## Classifies an integer into 3 tiers. Uses if as an expression, forming multi-level 4-space-increment indentation with nested if expressions.
+##
+## ```
+## assert(classify(200) == "huge")
+## ```
+def classify(n: int): str
+    label = if n > 5
+        if n > 100
+            "huge"
+        else
+            "big"
+    else
+        "small"
+    return label
+
+# Top-level executable statements (SPEC §5) run sequentially in the order written. The def/doc comment above are registered first at load time (D-SYN-08).
+small_result = classify(3)
+big_result = classify(10)
+huge_result = classify(200)
+assert(small_result == "small")
+assert(big_result == "big")
+assert(huge_result == "huge")

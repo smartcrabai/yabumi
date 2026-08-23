@@ -1,0 +1,12 @@
+# Verifies: SPEC §3.4 (scope of required type annotations) / D-TYPE-15 uninferable-type
+# conditions (3. a type variable appearing only in the return type), D-FUNC-04 generic
+# function type arguments / D-DIAG-02 E1003
+# make_empty's type variable T appears only in the return type list[T] and is never
+# determined from a parameter. With neither an assignment-target annotation nor an
+# explicit type argument `make_empty[T]()`, T cannot be determined, producing E1003 (uninferable type).
+
+def make_empty[T](): list[T]
+    return []
+
+xs = make_empty()
+print(xs.len())

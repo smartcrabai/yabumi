@@ -1,0 +1,42 @@
+#!/usr/bin/env ybm
+
+# SPEC 11.1 verification: for each of json/yaml/toml/csv, encodes then decodes the same
+# data and asserts, for all 4 formats, that it matches the original value via `==`
+# (D-OP-06, structural equality across every type including struct/enum/list). toml
+# encodes the struct as-is, per D-STDPOL-09's constraint (root must be dict/struct only).
+
+struct User
+    name: str
+    age: int
+
+original = User(name: "dana", age: 33)
+
+# --- json round-trip ---
+json_text = json.encode(original)
+decoded_json: User = json.decode(json_text)?
+assert(decoded_json == original)
+
+# --- yaml round-trip ---
+yaml_text = yaml.encode(original)
+decoded_yaml: User = yaml.decode(yaml_text)?
+assert(decoded_yaml == original)
+
+# --- toml round-trip (root is struct = representable as a table, D-STDPOL-09) ---
+toml_text = toml.encode(original)
+decoded_toml: User = toml.decode(toml_text)?
+assert(decoded_toml == original)
+
+# --- csv round-trip (rows is list[User]) ---
+original_rows = [User(name: "dana", age: 33), User(name: "erin", age: 41)]
+csv_text = csv.encode(original_rows)
+decoded_rows: list[User] = csv.decode[User](csv_text)?
+assert(decoded_rows == original_rows)
+
+# --- round-trip with Value (a dynamic type): decodes json text as Value, re-encodes
+# it, decodes again, and the structure still matches ---
+value_original: Value = json.decode(json_text)?
+value_text = json.encode(value_original)
+value_roundtrip: Value = json.decode(value_text)?
+assert(value_roundtrip == value_original)
+
+print("all codec round-trips ok")

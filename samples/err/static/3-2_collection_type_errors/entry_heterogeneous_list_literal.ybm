@@ -1,0 +1,6 @@
+# Verifies: SPEC §3.2 (collections) / D-TYPE-04 unifying collection element types / D-DIAG-02 E1010
+# Every element of a list must be unifiable into a single concrete type. A literal
+# mixing int and str cannot be unified, producing E1010 (there is no automatic
+# fallback to Any/Union).
+
+[1, "two", 3]

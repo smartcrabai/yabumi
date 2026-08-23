@@ -1,0 +1,44 @@
+#!/usr/bin/env ybm
+
+# SPEC §6.3 (pipe) verification: a bare-name pipe, a pipe requiring the `_` placeholder,
+# and a pipe mixing in postfix `?` per stage.
+# A pipe has the weakest precedence and is left-associative (D-OP-01). Since "the pipe
+# itself does not auto-short-circuit a Result" (SPEC §6.3), write an explicit `?` on
+# each stage where you want to propagate Err/None.
+
+def double(x: int): int
+    return x * 2
+
+# Parses a string into an int and confirms it is positive.
+def parse_positive(s: str): Result[int, Error]
+    n = s.parse_int()?
+    if n > 0
+        return Ok(n)
+    else
+        return Err(Error(kind: "decode", message: "not positive", cause: None))
+
+# Confirms the int is even.
+def validate_even(n: int): Result[int, Error]
+    if n % 2 == 0
+        return Ok(n)
+    else
+        return Err(Error(kind: "decode", message: "not even", cause: None))
+
+# A unary function allows a bare-name pipe (SPEC §6.3): `x |> f` is synonymous with `f(x)`
+# (the variable is named `seed`. To avoid colliding with the parameter `x` of this same
+# file's `def double(x: int)`, the generic name `x` is avoided for the top-level
+# variable -- since D-LINT-03 also treats a function boundary as an inner scope, the
+# same name would be flagged with the E4003 shadowing warning)
+seed = 5
+doubled = seed |> double
+assert(doubled == 10, "bare-name pipe: seed |> double should equal double(seed)")
+
+# With arguments, the `_` placeholder is required (SPEC §6.3; omitting it is a syntax error, E0503)
+data = {"a": 1, "b": 2}
+json_str = data |> json.encode
+write_err = json_str |> fs.write("_out/pipe_demo.json", _)
+assert(write_err.is_none(), "fs.write via placeholder pipe should succeed (Option[Error], None = success)")
+
+# A pipe mixing in postfix `?` per stage (SPEC §6.3): applies `?` to each stage's result before passing it to the next stage.
+result = "8" |> parse_positive? |> validate_even?
+assert(result == 8, "postfix ? on each pipe stage threads the unwrapped int through the pipeline")

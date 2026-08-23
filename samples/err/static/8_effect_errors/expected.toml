@@ -1,0 +1,50 @@
+# err/static/8_effect_errors
+# Verifies: SPEC §8. 3 kinds of effect violation.
+
+[[case]]
+id = "pure_function_direct_impure_call"
+entry = "entry_pure_function_direct_impure_call.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E2001"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E2001]" }
+doc_blocks = []
+requires_env = []
+notes = "Directly calling fs.read inside a function with no uses declaration is E2001 (D-EFF-01)"
+
+[[case]]
+id = "pure_function_indirect_via_stored_lambda"
+entry = "entry_pure_function_indirect_via_stored_lambda.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E2001"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E2001]" }
+doc_blocks = []
+requires_env = []
+notes = "After storing an effectful lambda in a variable, actually calling it inside a pure function is E2001 (D-EFF-02)"
+
+[[case]]
+id = "undeclared_effect_row_overflow"
+entry = "entry_undeclared_effect_row_overflow.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E2002"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E2002]" }
+doc_blocks = []
+requires_env = []
+notes = "The effect (net) of the lambda passed to the higher-order function is not a superset of the caller's uses declaration ({fs}), producing E2002 (D-FUNC-03)"

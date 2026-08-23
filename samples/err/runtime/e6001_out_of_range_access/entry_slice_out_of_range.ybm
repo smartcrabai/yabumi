@@ -1,0 +1,6 @@
+# Verifies: SPEC §7.4 (no panics) / DECISIONS D-ERR-04 item 1 (out-of-range access in general)
+# Specifying an end for list.slice(start, end) that exceeds the element count panics (E6001) and terminates immediately.
+# There is no dedicated safe version; the convention is to check xs.len() beforehand (STDLIB.md §2.1, §14).
+
+xs = [1, 2, 3]
+sliced = xs.slice(1, 10)

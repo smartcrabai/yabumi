@@ -1,0 +1,35 @@
+# Verifies SPEC.md §6.1's expression orientation (if / match are value-returning expressions).
+# Asserts a value-returning if expression, multi-branching via an if nested inside an
+# else block (D-SYN-03), and a successful case of an enum match's exhaustiveness check.
+
+score = 85
+label = if score > 80
+    "high"
+else
+    "low"
+assert(label == "high")
+
+grade = if score >= 90
+    "A"
+else
+    if score >= 80
+        "B"
+    else
+        "C"
+assert(grade == "B")
+
+enum Shape
+    Circle(radius: float)
+    Rect(w: float, h: float)
+
+shape = Circle(1.0)
+area = match shape
+    Circle(r) => 3.14 * r * r
+    Rect(w, h) => w * h
+assert(area == 3.14)
+
+shape2 = Rect(2.0, 3.0)
+area2 = match shape2
+    Circle(r) => 3.14 * r * r
+    Rect(w, h) => w * h
+assert(area2 == 6.0)

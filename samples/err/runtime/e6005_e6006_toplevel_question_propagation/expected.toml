@@ -1,0 +1,35 @@
+# Verifies: SPEC §7.2 / DECISIONS D-ERR-04/D-ERR-05, D-DIAG-02 (E6005/E6006)
+# Confirms that top-level `?` propagation of both Err (E6005) and None (E6006) terminates
+# immediately by printing to stderr and exiting 1.
+
+[[case]]
+id = "toplevel_err_propagation"
+entry = "entry_toplevel_err_propagation.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E6005"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E6005]" }
+doc_blocks = []
+requires_env = []
+notes = "Confirms that always_fails() always returns Err, and top-level `?` propagation of that Err terminates immediately with E6005."
+
+[[case]]
+id = "toplevel_none_propagation"
+entry = "entry_toplevel_none_propagation.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E6006"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E6006]" }
+doc_blocks = []
+requires_env = []
+notes = "Confirms that always_none() always returns None, and top-level `?` propagation of that None terminates immediately with E6006."

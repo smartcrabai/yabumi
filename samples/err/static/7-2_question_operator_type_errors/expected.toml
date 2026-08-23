@@ -1,0 +1,34 @@
+# err/static/7-2_question_operator_type_errors
+# Verifies: SPEC §7.2. Two kinds of `?` type mismatch.
+
+[[case]]
+id = "option_expr_in_result_function"
+entry = "entry_option_expr_in_result_function.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1060"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E1060]" }
+doc_blocks = []
+requires_env = []
+notes = "Using `?` on an Option expression (a list.find result) inside a Result-returning function is E1060 (D-ERR-01)"
+
+[[case]]
+id = "error_type_mismatch_across_functions"
+entry = "entry_error_type_mismatch_across_functions.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1060"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E1060]" }
+doc_blocks = []
+requires_env = []
+notes = "The callee's E' (str) mismatching the caller's E annotation (Error) is E1060 (D-ERR-01)"

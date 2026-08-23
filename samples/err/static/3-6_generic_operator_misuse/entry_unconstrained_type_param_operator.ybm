@@ -1,0 +1,14 @@
+# Verifies: SPEC §3.6 (generics) / D-FUNC-05 using an operator on an unconstrained type
+# parameter / D-DIAG-02 E1013
+# With no traits/inheritance, no constraint syntax exists for type parameters. A
+# function body cannot directly use `<` (an operator defined only for specific concrete
+# types) against an unconstrained T; this is caught by the generic-body-level check as E1013.
+# (`==`/`!=` are always applicable to T as structural equality, D-OP-06)
+
+def smaller[T](a: T, b: T): T
+    if a < b
+        return a
+    else
+        return b
+
+print(smaller(1, 2))

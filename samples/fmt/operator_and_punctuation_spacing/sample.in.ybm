@@ -1,0 +1,21 @@
+# Verifies: SPEC §12, DECISIONS D-FMT-01
+# Confirms that non-canonical forms missing or having excess spacing around binary
+# operators, commas, type-annotation colons, unary operators, and `not` can be reformatted into canonical form.
+a=1+2
+b:int=a-3
+c=a*b-1
+neg_c=- c
+cond=not(b<0)
+paren_cond=( c>0 )
+xs=[1,2,3]
+m={"x":1,"y":2}
+total=xs.sum()
+lookup=m.get( "x" ).unwrap_or( 0 )
+print(str(a))
+print(str(b))
+print(str(c))
+print(str(neg_c))
+print(cond)
+print(paren_cond)
+print(str(total))
+print(str(lookup))

@@ -1,0 +1,33 @@
+# Follows the schema in SAMPLES_PLAN.md §1.3. ok/3-6_generics: 2 cases.
+
+[[case]]
+id = "generic_function_monomorphization_and_explicit_type_arg"
+entry = "entry_main.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Calls SPEC §3.6's first[T] monomorphized with different concrete types (int/str), and calls empty_list[T](), whose type variable appears only in the return type, with an explicit type argument (D-FUNC-04)."
+
+[[case]]
+id = "generic_struct_and_enum"
+entry = "entry_generic_struct_and_enum.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Constructs the user-defined generic struct Box[T] / enum Pair[A, B] with different concrete types, and asserts field/variant access."

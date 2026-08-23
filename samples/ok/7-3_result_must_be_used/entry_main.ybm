@@ -1,0 +1,37 @@
+#!/usr/bin/env ybm
+
+# SPEC §7.3 (ignoring a Result is forbidden) verification: that a Result is judged
+# "used" in each context of DECISIONS D-ERR-03 rule 2, and explicit discard via `_ = f()` (the workaround for D-ERR-03 rule 1).
+
+def try_parse(s: str): Result[int, Error]
+    return s.parse_int()
+
+# Context 1: used as an assignment's right-hand side
+parsed = try_parse("10")
+assert(parsed.is_ok(), "assignment-RHS context: Result is used")
+
+# Context 2: used as a return target (inside another function; D-TYPE-17 case 1: no wrap needed since the type matches exactly)
+def wraps_try_parse(s: str): Result[int, Error]
+    return try_parse(s)
+
+wrapped = wraps_try_parse("20")
+assert(wrapped.unwrap() == 20, "return-target context: Result is used")
+
+# Context 3: used as a function-call argument (passed directly without assigning to a variable)
+def unwrap_or_zero(r: Result[int, Error]): int
+    return r.unwrap_or(0)
+
+arg_used = unwrap_or_zero(try_parse("30"))
+assert(arg_used == 30, "function-call-argument context: Result is used")
+
+# Context 4: used as a collection-literal element
+results_list: list[Result[int, Error]] = [try_parse("1"), try_parse("2"), try_parse("x")]
+assert(results_list.count() == 3, "collection-literal-element context: Result is used")
+assert(results_list.get(2).unwrap().is_err(), "the invalid element should be an Err")
+
+# Context 5: used as an operator (==) operand. Comparing two Results is possible via structural equality (D-OP-06).
+assert(try_parse("7") == try_parse("7"), "operand-of-operator context: comparing two Result values directly via ==")
+assert(try_parse("7") != try_parse("8"), "distinct Ok values should not be ==")
+
+# Explicit discard: an unused Result is discarded via `_ = f()` (D-ERR-03 rule 1, the sole workaround)
+_ = try_parse("this is not a number")

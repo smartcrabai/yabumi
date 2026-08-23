@@ -1,0 +1,66 @@
+# SPEC §1 (CLI): confirms that the 4 subcommands run/check/check --check/test all
+# complete with exit 0 and no diagnostics against the same file.
+
+[[case]]
+id = "run_ok"
+entry = "entry_main.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Runs after type-checking succeeds, and every assert succeeds (stdout/stderr are empty since print/eprint are not used)."
+
+[[case]]
+id = "check_ok"
+entry = "entry_main.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Type-checking (including doc-test-block type-checking, never running) + fmt (in-place) + lint all pass. Since the source is already in fmt-canonical form, the in-place rewrite makes no change."
+
+[[case]]
+id = "check_diff_ok"
+entry = "entry_main.ybm"
+cmd = "check_diff"
+args = ["--check"]
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Equivalent to ybm check entry_main.ybm --check. Since the source is fmt-canonical, there is no diff (D-CLI-02: --check is synonymous whether placed before or after the file)."
+
+[[case]]
+id = "test_ok"
+entry = "entry_main.ybm"
+cmd = "test"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "doctest: 1 passed, 0 failed\n" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = [{ line = 8, result = "pass" }]
+requires_env = []
+notes = "Runs the doc test block (line 8's assert(add(1, 2) == 3)) as an independent program, and it passes. Since the exact wording of the pass/fail summary is unspecified by SPEC/DECISIONS, stdout uses contains (an empty string, effectively unverified)."

@@ -1,0 +1,50 @@
+# Verifies: SPEC §12 (lint), DECISIONS D-LINT-03 (shadowing E4003)
+# For each of the 4 inner scopes D-LINT-03 enumerates (if / match / lambda parameter / function boundary (def parameter)),
+# creates a binding with the same name as an existing name in the outer scope, reporting E4003 4 times.
+# Both the shadowed and the shadowing variable are referenced and used,
+# so that E4001 (unused variable) does not fire as a side effect.
+#
+# (2) The if case uses an explicit new binding via `var` in the inner scope. A bare
+# `outer = 2` would be judged by the visibility check in `types::check_stmt::check_name_assign`
+# (which looks across the whole visible scope inside the function boundary) as "a reassignment of the existing `outer`",
+# and since `outer` is not a var declaration, E3001 (D-MUT-01..03) would fire first and no new binding would occur,
+# so it would not become a D-LINT-03 shadowing target (type checking stops it before Lint is reached).
+# `var` always creates a new binding regardless of an existing same-named binding (genuinely
+# Rust-like shadowing semantics), letting this trigger pure E4003 without going through E3001.
+
+value = 10
+
+# (1) Function boundary: parameter value has the same name as the top-level variable value (an explicit D-LINT-03 target)
+def shadow_in_function_boundary(value: int): int
+    return value + 1
+
+# (2) if: the new binding outer inside the if clause has the same name as the function-scope outer
+# (using `var` for an explicit new binding makes it a new binding without going through E3001)
+def check_if_shadow(flag: bool): int
+    outer = 1
+    branch_value = if flag
+        var outer = 2
+        outer
+    else
+        outer
+    return branch_value + outer
+
+# (3) match: the bare identifier item in the arm has the same name as the function-scope item
+#     (since the scrutinee is int, a trailing wildcard _ is required per D-TYPE-18)
+def check_match_shadow(n: int): int
+    item = 10
+    result = match n
+        item => item + 1
+        _ => -1
+    return result + item
+
+# (4) Lambda parameter: the lambda's parameter factor has the same name as the function-scope factor
+def apply_lambda_shadow(item: int): int
+    factor = 3
+    results = [item].map((factor) => factor * 2)
+    return results.get(0).unwrap_or(0) + factor
+
+print(shadow_in_function_boundary(value))
+print(check_if_shadow(true))
+print(check_match_shadow(5))
+print(apply_lambda_shadow(4))

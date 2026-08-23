@@ -1,0 +1,18 @@
+module
+
+# The shared module for the SPEC §15 sample: declares struct Repo and fetch_repos(user).
+# A module holds only declarations (top-level executable statements forbidden,
+# D-MOD-02; a violation is E5002).
+# fetch_repos is exactly as SPEC §15 describes (propagates http.get's Result through
+# `?`, decodes it into list[Repo] via assignment-target-annotation-driven json.decode,
+# then wraps it in Ok and returns).
+# D-TYPE-17 priority 1: the case of `return Ok(repos)`, where the return type already matches Result[list[Repo], Error].
+
+struct Repo
+    name: str
+    stars: int
+
+def fetch_repos(user: str): Result[list[Repo], Error] uses {net}
+    body = http.get(f"https://api.example.com/users/{user}/repos")?.body
+    repos: list[Repo] = json.decode(body)?
+    return Ok(repos)

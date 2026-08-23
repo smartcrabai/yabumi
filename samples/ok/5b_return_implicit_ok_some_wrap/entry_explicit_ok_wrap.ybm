@@ -1,0 +1,15 @@
+# Verifies DECISIONS D-TYPE-17's priority 1 (an explicit Ok/Err matching the return-type annotation Result[T, E]).
+# The same form as SPEC §15's `return Ok(repos)`: returns an expression explicitly constructed with Ok(v) / Err(e) as-is.
+
+def safe_half(n: int): Result[int, Error]
+    if n % 2 != 0
+        return Err(Error(kind: "decode", message: "n is not even", cause: None))
+    else
+        return Ok(n / 2)
+
+ok_case = safe_half(10)
+assert(ok_case.unwrap() == 5)
+
+err_case = safe_half(3)
+assert(err_case.is_err())
+assert(err_case.err().unwrap().message == "n is not even")

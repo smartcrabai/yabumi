@@ -1,0 +1,7 @@
+# Verifies: SPEC §7.4 (no panics) / DECISIONS D-ERR-04 item 3
+# Integer division by zero via % panics (E6002) and terminates immediately.
+# The safe version is math.checked_mod(a, b): Option[int] (STDLIB.md §12, §14).
+
+a = 10
+b = 0
+remainder = a % b

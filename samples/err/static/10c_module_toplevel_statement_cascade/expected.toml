@@ -1,0 +1,35 @@
+# Verifies: SPEC §10, DECISIONS.md D-MOD-01, pattern 4 (SAMPLES_PLAN.md §2)
+# entry_alpha.ybm / entry_beta.ybm are each correct on their own, but the same-directory
+# mod_broken.ybm contains a top-level executable statement (E5002) and is auto-imported, so both checks fail as a chain reaction.
+
+[[case]]
+id = "check_alpha_cascades_from_broken_module"
+entry = "entry_alpha.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E5002"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E5002]" }
+doc_blocks = []
+requires_env = []
+notes = "entry_alpha.ybm itself does not depend on mod_broken.ybm and is correct on its own, but the same-directory mod_broken.ybm's top-level print statement becomes E5002, and auto-import (D-MOD-01) fails the whole check."
+
+[[case]]
+id = "check_beta_cascades_from_broken_module"
+entry = "entry_beta.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E5002"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E5002]" }
+doc_blocks = []
+requires_env = []
+notes = "entry_beta.ybm itself does not depend on mod_broken.ybm and is correct on its own, but the same-directory mod_broken.ybm's top-level print statement becomes E5002, and auto-import (D-MOD-01) fails the whole check. Together with the entry_alpha case, this demonstrates that one broken module breaks every entry in the same directory (pattern 4)."

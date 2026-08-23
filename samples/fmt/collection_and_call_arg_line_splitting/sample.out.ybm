@@ -1,0 +1,46 @@
+# Verifies: SPEC §3.2/§12, DECISIONS D-FMT-05
+# Confirms that a list/dict/set/tuple literal or function-call argument list containing
+# at least one newline between its opening and closing bracket is normalized to 1 line
+# per element (a trailing comma from D-TYPE-02 is also added), while one containing no
+# newline stays on a single line.
+def make_triplet(a: int, b: int, c: int): tuple[int, int, int]
+    return (a, b, c)
+
+multi_trigger_list = [
+    1,
+    2,
+    3,
+]
+single_line_list = [1, 2, 3]
+multi_trigger_dict = {
+    "a": 1,
+    "b": 2,
+}
+single_line_dict = {"a": 1, "b": 2}
+multi_trigger_set = {
+    1,
+    2,
+    3,
+}
+single_line_set = {1, 2, 3}
+multi_trigger_tuple = (
+    1,
+    2,
+)
+single_line_tuple = (1, 2)
+multi_trigger_call = make_triplet(
+    1,
+    2,
+    3,
+)
+single_line_call = make_triplet(1, 2, 3)
+print(str(multi_trigger_list.sum()))
+print(str(single_line_list.sum()))
+print(str(multi_trigger_dict.len()))
+print(str(single_line_dict.len()))
+print(str(multi_trigger_set.len()))
+print(str(single_line_set.len()))
+print(str(multi_trigger_tuple.0))
+print(str(single_line_tuple.0))
+print(str(multi_trigger_call.0))
+print(str(single_line_call.0))

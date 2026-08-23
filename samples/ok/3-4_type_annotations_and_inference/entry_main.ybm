@@ -1,0 +1,39 @@
+# SPEC §3.4: verifies function signatures' required annotations, local-variable
+# inference, and the 4 contexts of assignment-target-annotation-driven inference
+# Referenced decisions: D-TYPE-15 (an empty collection etc. is uninferable, except in a
+# context where assignment-target-driven inference applies)
+# D-TYPE-16 (the 4 contexts: (1) a variable declaration's initializer (2) a return
+# statement (3) a function-call argument position (4) a struct/enum constructor
+# argument position. Also propagates recursively into a nested collection)
+
+def add(a: int, b: int): int
+    total = a + b
+    return total
+
+# Context (1) A variable declaration's initializer: inference propagates recursively even into a nested empty list (exactly D-TYPE-16's example)
+xs: list[list[int]] = [[], [1, 2]]
+assert(xs.len() == 2)
+assert(xs[0].is_empty())
+assert(xs[1].len() == 2)
+
+# Context (2) A return statement: infers the empty list's type from the function's return-type annotation
+def make_empty(): list[int]
+    return []
+
+assert(make_empty().is_empty())
+
+# Context (3) A function-call argument position: infers the empty dict's type from the parameter's type annotation
+def count_entries(m: dict[str, int]): int
+    return m.len()
+
+assert(count_entries({}) == 0)
+
+# Context (4) A struct/enum constructor argument position: infers the empty list's type from the field's type annotation
+struct Bag
+    items: list[int]
+
+bag = Bag(items: [])
+assert(bag.items.is_empty())
+
+result = add(2, 3)
+assert(result == 5)

@@ -1,0 +1,21 @@
+# Verifies: SPEC §3.2/§12, DECISIONS D-TYPE-02
+# Confirms that a trailing comma is added to a multi-line list literal / function call,
+# and removed from a single-line one.
+def make_point(x: int, y: int): tuple[int, int]
+    return (x, y)
+
+multi_line_list = [
+    1,
+    2,
+    3,
+]
+single_line_list = [1, 2, 3]
+multi_line_call = make_point(
+    1,
+    2,
+)
+single_line_call = make_point(1, 2)
+print(str(multi_line_list.sum()))
+print(str(single_line_list.sum()))
+print(str(multi_line_call.0))
+print(str(single_line_call.0))

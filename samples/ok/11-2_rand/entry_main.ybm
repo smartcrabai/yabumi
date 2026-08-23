@@ -1,0 +1,21 @@
+#!/usr/bin/env ybm
+
+# SPEC 11.2 rand verification: deterministic int/choice/shuffle via degenerate intervals.
+# STDLIB.md §10 rand -- effect: rand. By using a single-element half-open interval and a
+# single-element list, the output is uniquely determined even though the randomness
+# itself is non-deterministic (the policy of SAMPLES_PLAN.md section 1.4).
+# No uses declaration is needed for a top-level statement (SPEC §8: "top-level implicitly allows every effect").
+
+n = rand.int(5, 6)
+assert(n == 5, "rand.int(5, 6) is the half-open interval [5, 6), so it is always 5")
+
+single = [42]
+picked = rand.choice(single)
+assert(picked.is_some(), "rand.choice on a non-empty list should be Some")
+assert(picked.unwrap() == 42, "rand.choice on a single-element list always returns that one element")
+
+var ys = [42]
+ys.shuffle()
+assert(ys == [42], "rand.shuffle on a single-element list cannot change its order")
+
+print("rand sample done")

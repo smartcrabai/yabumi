@@ -1,0 +1,22 @@
+#!/usr/bin/env ybm
+
+# Verifies SPEC 11.3's 4-type overload (str/int/float/bool) of the built-in functions
+# print/eprint, and the stdout/stderr separation.
+# D-STDPOL-01: print/eprint are a special-case overload limited to the 4 primitive
+# types (allowed only for stdlib).
+# D-CLI-01: print writes to stdout, eprint writes to stderr.
+# Each value's display form follows D-TYPE-14's str(x) equivalent (int in decimal,
+# float always with a decimal point in its shortest round-trip representation, bool as
+# "true"/"false"), and every print/eprint call outputs exactly 1 trailing newline (the
+# same convention as the print behavior in existing samples).
+# float uses 3.5 / 1.5, whose round-trip representation is unambiguous, to avoid formatting ambiguity.
+
+print("hello")
+print(42)
+print(3.5)
+print(true)
+
+eprint("oops")
+eprint(7)
+eprint(1.5)
+eprint(false)

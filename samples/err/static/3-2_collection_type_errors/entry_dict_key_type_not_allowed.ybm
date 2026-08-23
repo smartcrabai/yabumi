@@ -1,0 +1,5 @@
+# Verifies: SPEC §3.2 (collections) / D-TYPE-05 dict key / set element type constraints / D-DIAG-02 E1011
+# A dict's K is restricted to int/str/bool, and tuples of only allowed key types.
+# float is forbidden as a key, so this produces E1011.
+
+{1.5: "value"}

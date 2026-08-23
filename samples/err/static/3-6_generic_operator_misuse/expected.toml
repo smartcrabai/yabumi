@@ -1,0 +1,15 @@
+[[case]]
+id = "check_unconstrained_type_param_operator"
+entry = "entry_unconstrained_type_param_operator.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1013"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Uses `<` directly on the unconstrained generic type parameter T, producing E1013 via the generic function body check per D-FUNC-05 (detected at the body level, regardless of whether the call site monomorphizes T to int)."

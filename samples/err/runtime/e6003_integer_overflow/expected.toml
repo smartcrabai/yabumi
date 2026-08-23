@@ -1,0 +1,35 @@
+# Verifies: SPEC §7.4 / DECISIONS D-ERR-04 item 4, D-DIAG-02 (E6003)
+# Confirms that both an i64-range arithmetic overflow and an out-of-range int(x: float)
+# conversion terminate immediately with E6003.
+
+[[case]]
+id = "arithmetic_overflow"
+entry = "entry_arithmetic_overflow.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E6003"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E6003]" }
+doc_blocks = []
+requires_env = []
+notes = "Confirms that max_i64 + 1 (max_i64 is i64::MAX = 9223372036854775807) overflows out of the i64 range and terminates immediately with E6003."
+
+[[case]]
+id = "float_to_int_overflow"
+entry = "entry_float_to_int_overflow.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E6003"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E6003]" }
+doc_blocks = []
+requires_env = []
+notes = "Confirms that converting int(big) (big=1.0e300, far exceeding the i64 range) terminates immediately with E6003."

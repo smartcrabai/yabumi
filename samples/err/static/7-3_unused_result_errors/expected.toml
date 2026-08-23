@@ -1,0 +1,34 @@
+# err/static/7-3_unused_result_errors
+# Verifies: SPEC §7.3. Two contexts of an unused Result.
+
+[[case]]
+id = "unused_result_statement"
+entry = "entry_unused_result_statement.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1040"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E1040]" }
+doc_blocks = []
+requires_env = []
+notes = "Discarding a Result-returning expression standalone as an expression statement is E1040 (D-ERR-03 rule 1)"
+
+[[case]]
+id = "unused_result_pipe_tail"
+entry = "entry_unused_result_pipe_tail.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1040"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E1040]" }
+doc_blocks = []
+requires_env = []
+notes = "The pipe's final result is a Result discarded as an expression statement with no trailing `?`, producing E1040 (D-ERR-03 rule 3)"

@@ -1,0 +1,19 @@
+# Verifies: SPEC §10, DECISIONS.md D-MOD-01 (boundary where the entry itself carries a module directive)
+# Even though line 1 of the file passed to `ybm` is a correctly formed (bare, nameless)
+# module directive, it also contains top-level executable statements (a function call and print) afterward, so D-MOD-02's rule produces E5002.
+
+[[case]]
+id = "run_entry_with_module_directive"
+entry = "entry_with_module_directive.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E5002"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E5002]" }
+doc_blocks = []
+requires_env = []
+notes = "Because line 1 of this file passed to ybm is a correct module directive (bare `module`), D-MOD-01 applies D-MOD-02 (a module forbids top-level executable statements). The compute(1) call and print that follow are top-level executable statements, so E5002. Since type-checking fails first (§1: \"execute only after type-checking succeeds\"), execution (print's actual output) never happens, so stdout is empty. The filename uses entry_ per §1.2's naming convention, even though its content is effectively a module-directive file (mod_ equivalent); this is noted explicitly in the file's header comment."

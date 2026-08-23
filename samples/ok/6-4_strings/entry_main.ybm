@@ -1,0 +1,62 @@
+#!/usr/bin/env ybm
+
+# SPEC §6.4 (strings) verification: f-string interpolation, `{{`/`}}` escaping,
+# auto-stringified embedding of int/float/bool, interpolating a string containing
+# kanji/emoji, `+` concatenation, `==` structural equality, and Unicode-scalar-value
+# (char) unit indexing over multibyte characters (DECISIONS D-COL-03).
+
+n = 42
+pi = 3.14
+flag = true
+name = "Yabumi"
+
+# Basic interpolation: int/float/bool are automatically stringified via a built-in conversion and embedded (D-LEX-07)
+basic = f"count: {n}"
+assert(basic == "count: 42", "int should auto-stringify in f-string interpolation")
+
+float_embed = f"pi is {pi}"
+assert(float_embed == "pi is 3.14", "float should auto-stringify in f-string interpolation")
+
+bool_embed = f"flag is {flag}"
+assert(bool_embed == "flag is true", "bool should auto-stringify in f-string interpolation")
+
+# `{{` / `}}` escaping (D-LEX-07): `{{` -> literal `{`, `}}` -> literal `}`
+escaped = f"{{literal braces}} around {name}"
+assert(escaped == "{literal braces} around Yabumi", "{{ and }} should escape to literal braces")
+
+# Interpolates a string containing kanji/emoji into {expr}
+# sakoku-ignore-next-line
+greeting = "こんにちは"
+emoji = "🎉"
+mixed = f"{greeting} {name} {emoji}"
+# sakoku-ignore-next-line
+assert(mixed == "こんにちは Yabumi 🎉", "multibyte (kanji/emoji) strings should interpolate as-is")
+
+# `+` concatenation
+# sakoku-ignore-next-line
+concatenated = greeting + "、" + name + "さん" + emoji
+# sakoku-ignore-next-line
+assert(concatenated == "こんにちは、Yabumiさん🎉", "+ concatenates str values")
+
+# `==` structural equality (reference equality does not exist in the language, D-OP-06)
+# sakoku-ignore-next-line
+copy_of_greeting = "こんにちは"
+assert(greeting == copy_of_greeting, "== is structural equality, not reference equality")
+assert(concatenated != greeting, "distinct str contents should not be ==")
+
+# char (Unicode scalar value) unit indexing over multibyte characters (D-COL-03).
+# sakoku-ignore-next-line
+# "こんにちは" is 5 characters (5 Unicode scalar values). len is determined by the
+# char count, not the UTF-8 byte count (15 bytes).
+assert(greeting.len() == 5, "len() counts Unicode scalar values, not UTF-8 bytes")
+# sakoku-ignore-next-line
+assert(greeting.get(0).unwrap() == "こ", "get(0) should return the first char as a 1-length str")
+# sakoku-ignore-next-line
+assert(greeting.get(4).unwrap() == "は", "get(4) should return the last char")
+assert(greeting.get(5).is_none(), "get(5) is out of range -> None, not a panic (safe API, D-COL-03)")
+# sakoku-ignore-next-line
+assert(greeting.chars() == ["こ", "ん", "に", "ち", "は"], "chars() splits into a list of 1-char strings")
+
+# An emoji, too, counts as 1 char (1 Unicode scalar value), provided it's a non-composed, single-codepoint emoji
+assert(emoji.len() == 1, "a simple (non-composed) emoji counts as a single Unicode scalar value")
+assert(emoji.chars() == ["🎉"], "chars() on a single-scalar emoji yields a 1-element list")

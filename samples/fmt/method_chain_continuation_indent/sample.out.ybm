@@ -1,0 +1,21 @@
+# Verifies: SPEC §6.2/§12, DECISIONS D-SYN-05
+# The indent amount of a `.`/`|>`-led line continuation is syntactically free as long
+# as it's a multiple of 4, but confirms that fmt always normalizes it to the base line (the statement's first line) + 4.
+def shout(s: str): str
+    return s.to_upper()
+
+def compute(xs: list[int]): int
+    result = xs
+        .filter((x) => x > 0)
+        .map((x) => x * 2)
+        .sum()
+    return result
+
+values = [1, -2, 3, -4, 5]
+total = compute(values)
+assert(total == 18)
+
+formatted = total |> str |> shout
+
+assert(formatted == "18")
+print(f"total: {formatted}")

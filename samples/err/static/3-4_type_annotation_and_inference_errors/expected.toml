@@ -1,0 +1,63 @@
+[[case]]
+id = "check_missing_param_annotation"
+entry = "entry_missing_param_annotation.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1002"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Function parameter x is missing its type annotation, producing E1002 (D-TYPE-11)."
+
+[[case]]
+id = "check_uninferable_empty_collection"
+entry = "entry_uninferable_empty_collection.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1003"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "A bare empty-list-literal initialization with no expected type is uninferable, producing E1003 (D-TYPE-15 item 1)."
+
+[[case]]
+id = "check_uninferable_none_literal"
+entry = "entry_uninferable_none_literal.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1003"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "The bare initialization `x = None` leaves Option[T]'s T undetermined, producing E1003 (D-TYPE-15 item 2)."
+
+[[case]]
+id = "check_uninferable_generic_return"
+entry = "entry_uninferable_generic_return.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1003"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "The type variable T, appearing only in the return type, cannot be determined from either an explicit type argument or an assignment-target annotation, producing E1003 (D-TYPE-15 item 3, D-FUNC-04)."

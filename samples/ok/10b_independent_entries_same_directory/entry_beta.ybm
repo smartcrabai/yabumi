@@ -1,0 +1,14 @@
+#!/usr/bin/env ybm
+
+# SPEC 10 verification (pattern 2): completely independent of entry_alpha.ybm, which is
+# in the same directory and also has no module directive. entry_alpha.ybm also defines
+# its own `helper` with the same name, but the implementation is entirely different
+# (even the return type differs, int vs str). Since there's no module directive, they
+# never load each other, and no name collision (E1001) occurs.
+
+def helper(x: int): str
+    return f"beta-{x * 2}"
+
+result = helper(21)
+assert(result == "beta-42")
+print(f"beta helper: {result}")

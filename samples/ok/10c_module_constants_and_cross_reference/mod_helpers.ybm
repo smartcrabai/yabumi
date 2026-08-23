@@ -1,0 +1,14 @@
+module
+
+# Verifies SPEC 10 / D-MOD-03: declares functions that reference mod_constants.ybm's
+# constants. There is no notion of circular reference, since every declaration in the
+# same directory is registered all at once at load time, so cross-file referencing works as an ordinary identifier reference.
+
+def retries_exhausted(attempt: int): bool
+    return attempt >= max_retries
+
+def greeting(): str
+    return f"hello from {app_name}"
+
+def total_delay_ms(): int
+    return retry_delays_ms.sum()

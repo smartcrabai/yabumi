@@ -1,0 +1,52 @@
+# Follows the schema in SAMPLES_PLAN.md §1.3. ok/5b_return_implicit_ok_some_wrap: 3 cases.
+# Design note: this directory is a deliberately atypical grouping showing D-TYPE-17's
+# priorities 1 through 3 together, and only the 3rd, entry_type_mismatch.ybm, carries
+# exit_code=1 / diagnostics=["E1020"] (a deliberate departure from the ok/err separation convention).
+
+[[case]]
+id = "implicit_wrap"
+entry = "entry_implicit_wrap.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Verifies D-TYPE-17's priority 1 (explicit None) and priority 2 (implicitly wrapping a bare float as Some)."
+
+[[case]]
+id = "explicit_ok_wrap"
+entry = "entry_explicit_ok_wrap.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Verifies D-TYPE-17's priority 1 (an explicit Ok/Err of the same form as SPEC §15's return Ok(repos))."
+
+[[case]]
+id = "type_mismatch"
+entry = "entry_type_mismatch.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1020"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E1020]" }
+doc_blocks = []
+requires_env = []
+notes = "The only failing case in this directory, deliberately triggering E1020 via D-TYPE-17's priority 3 (returning a str matching neither the annotation nor T)."

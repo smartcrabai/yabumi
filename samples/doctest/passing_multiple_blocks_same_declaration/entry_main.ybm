@@ -1,0 +1,26 @@
+# Verifies: SPEC §13 / D-DOC-01, D-DOC-02
+# Confirms that multiple fenced blocks inside a single `##` doc comment are each counted
+# individually as their own independent test case (D-DOC-02), and that a block tagged
+# with a language (```json) is ignored as a test target (D-DOC-01).
+
+## Adds two ints.
+##
+## ```
+## assert(add(1, 2) == 3)
+## ```
+##
+## Example output format (excluded as a test target because it has a language tag, D-DOC-01).
+##
+## ```json
+## {"a": 1, "b": 2}
+## ```
+##
+## Also confirmed with another addition pattern.
+##
+## ```
+## assert(add(10, 20) == 30)
+## ```
+def add(a: int, b: int): int
+    return a + b
+
+print(add(1, 1))

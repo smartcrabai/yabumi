@@ -1,0 +1,4 @@
+# Verifies: SPEC §2 (lexical) / D-LEX-05 string literals / D-DIAG-02 E0002
+# A string literal missing its closing `"` produces E0002 (unterminated string).
+
+x = "unterminated string

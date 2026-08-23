@@ -1,0 +1,6 @@
+# Verifies: SPEC §3.1 (floating-point literals) / D-LEX-04 float literals / D-DIAG-02 E0004
+# At least one digit is required on both sides of the decimal point; both `.5` and `5.`
+# are lexical errors. Lexing stops at the first invalid literal it encounters, so this
+# file targets the digit missing right after the decimal point (`5.`).
+
+x = 5.

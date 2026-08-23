@@ -1,0 +1,8 @@
+module
+
+# Verifies: SPEC §10 / D-MOD-04
+# A helper module placed in the same directory as entry_main.ybm.
+# Auto-inclusion lets entry_main.ybm's doc test blocks call it too.
+
+def double(n: int): int
+    return n * 2

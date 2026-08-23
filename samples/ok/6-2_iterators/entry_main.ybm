@@ -1,0 +1,58 @@
+# Verifies SPEC.md §6.2's eager iterators, every method individually.
+# Verifies each of STDLIB.md §2.1 list[T]'s method vocabulary (map/filter/fold/find/
+# any/all/count/sum/enumerate/zip/rev/take/skip/flat_map/sort_by/chain) with its own
+# independent assert, and additionally verifies DECISIONS D-SYN-09's each (sequential side-effecting iteration, returning void).
+
+xs = [1, 2, 3, 4, 5]
+
+mapped = xs.map((x) => x * 10)
+assert(mapped == [10, 20, 30, 40, 50])
+
+filtered = xs.filter((x) => x % 2 == 0)
+assert(filtered == [2, 4])
+
+folded = xs.fold(0, (acc, x) => acc + x)
+assert(folded == 15)
+
+found = xs.find((x) => x > 3)
+assert(found.unwrap() == 4)
+
+has_big = xs.any((x) => x > 4)
+assert(has_big)
+
+all_positive = xs.all((x) => x > 0)
+assert(all_positive)
+
+n = xs.count()
+assert(n == 5)
+
+total = xs.sum()
+assert(total == 15)
+
+enumerated = xs.enumerate()
+assert(enumerated == [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)])
+
+ys = ["a", "b", "c", "d", "e"]
+zipped = xs.zip(ys)
+assert(zipped == [(1, "a"), (2, "b"), (3, "c"), (4, "d"), (5, "e")])
+
+reversed_xs = xs.rev()
+assert(reversed_xs == [5, 4, 3, 2, 1])
+
+taken = xs.take(2)
+assert(taken == [1, 2])
+
+skipped = xs.skip(3)
+assert(skipped == [4, 5])
+
+flat = xs.flat_map((x) => [x, x * 100])
+assert(flat == [1, 100, 2, 200, 3, 300, 4, 400, 5, 500])
+
+sorted_desc = xs.sort_by((x) => -x)
+assert(sorted_desc == [5, 4, 3, 2, 1])
+
+chained = xs.chain([6, 7])
+assert(chained == [1, 2, 3, 4, 5, 6, 7])
+
+# each: sequential, non-parallel iteration dedicated to side effects (D-SYN-09). Returns void.
+xs.each((x) => print(str(x)))

@@ -1,0 +1,9 @@
+#!/usr/bin/env ybm
+# Verifies: SPEC.md §1 (CLI). The ybm CLI only accepts files with the `.ybm` extension.
+# DECISIONS.md D-CLI-04: an invalid extension is treated as a file I/O error, diagnostic code E9002, exit code 1.
+# This file's own extension is deliberately `.notybm`. Even though its content is
+# grammatically correct, the CLI rejects it via the extension check before opening/
+# lexing the file, so the print below should never execute (a side effect is left in
+# place so execution would be detectable if it somehow did run).
+
+print("this line must never execute: extension check happens before parsing")

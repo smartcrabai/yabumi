@@ -1,0 +1,27 @@
+#!/usr/bin/env ybm
+
+# SPEC 11.2 time verification: format/parse round-trip at a fixed epoch_ms; confirms
+# only sleep's effect/type; confirms time.now() requires effect{time} and returns int only.
+# STDLIB.md §9: time.now/sleep/format/parse all carry effect {time}.
+# There is no dedicated DateTime/Duration type; time is always represented as epoch
+# milliseconds (int) (D-STDPOL-06).
+# time.format's format is strftime-like, interpreted as UTC (since SPEC/DECISIONS says nothing otherwise).
+# No uses declaration is needed for a top-level statement (SPEC §8: "top-level implicitly allows every effect").
+
+fmt = "%Y-%m-%d %H:%M:%S"
+epoch_ms = 1700000000000
+
+formatted = time.format(epoch_ms, fmt)
+assert(formatted == "2023-11-14 22:13:20", "time.format should render the fixed epoch_ms as UTC")
+
+parsed = time.parse(formatted, fmt)?
+assert(parsed == epoch_ms, "time.parse should round-trip back to the original epoch_ms")
+
+# time.sleep returns void (void can never be literalized, stored, or compared, D-TYPE-08).
+# Being writable as-is as an expression statement is itself the confirmation of "returns void".
+time.sleep(1)
+
+now = time.now()
+assert(now > 0, "time.now() must return an int (being able to use an ordering-comparison operator confirms the int type); the value itself is non-deterministic, so it is not verified")
+
+print("time sample done")

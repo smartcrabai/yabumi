@@ -1,0 +1,20 @@
+# Follows the schema in SAMPLES_PLAN.md section 1.3.
+# Verifies SPEC 11.2 / STDLIB.md §8 proc by executing it against SAMPLES_PLAN.md section
+# 1.4.2's fixture-binary contract table (echo/fail/cat). In a runtime environment where
+# requires_env is unset, the harness may skip this case (sections 1.3/1.4).
+
+[[case]]
+id = "run_ok"
+entry = "entry_main.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "proc sample done\n" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = ["YABUMI_TEST_PROC_BIN"]
+notes = "Executes the 3 subcommands echo/fail/cat against the fixture binary and verifies stdout/stderr/exit_code exactly per section 1.4.2's contract table."

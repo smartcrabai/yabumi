@@ -1,0 +1,6 @@
+# Verifies: SPEC §2 (lexical) / D-SYN-01 strict indentation checking / D-DIAG-02 E0001
+# Even a single tab character mixed into indentation triggers E0001 immediately at the
+# lexical layer (indentation is fixed at 4 spaces; a tab is a syntax error).
+
+def compute(): int
+	return 1

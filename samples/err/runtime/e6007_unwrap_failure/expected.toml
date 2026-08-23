@@ -1,0 +1,35 @@
+# Verifies: SPEC §7.4 / DECISIONS D-ERR-04 item 6, D-DIAG-02 (E6007)
+# Confirms that calling Result.unwrap()/Option.unwrap() on Err/None respectively
+# both terminate immediately with E6007.
+
+[[case]]
+id = "result_unwrap_on_err"
+entry = "entry_result_unwrap_on_err.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E6007"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E6007]" }
+doc_blocks = []
+requires_env = []
+notes = "Confirms that calling unwrap() on the Err(e) returned by always_fails() terminates immediately with E6007."
+
+[[case]]
+id = "option_unwrap_on_none"
+entry = "entry_option_unwrap_on_none.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E6007"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E6007]" }
+doc_blocks = []
+requires_env = []
+notes = "Confirms that calling unwrap() on the None returned by always_none() terminates immediately with E6007."

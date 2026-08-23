@@ -1,0 +1,18 @@
+# Verifies: SPEC §12, DECISIONS D-LINT-05 (E4005 naming convention violation)
+# Follows the schema in SAMPLES_PLAN.md §1.3.
+
+[[case]]
+id = "check_reports_naming_violations"
+entry = "entry_naming_violations.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E4005", "E4005", "E4005", "E4005", "E4005", "E4005"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E4005]" }
+doc_blocks = []
+requires_env = []
+notes = "The 6 E4005s correspond to: (1) struct name point (PascalCase violation), (2) struct field Y (snake_case violation), (3) enum variant inactive (PascalCase violation), (4) function name ComputeArea (snake_case violation), (5) function parameter Name (snake_case violation), (6) variable BadVariable (snake_case violation). The generic type variables T and U in identity[T] / pair_first[T, U] are exempt per D-LINT-05 and are not counted as violations (contrast). Every identifier is referenced and used, so E4001/E4002 never fire."

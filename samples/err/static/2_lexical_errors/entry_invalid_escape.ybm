@@ -1,0 +1,4 @@
+# Verifies: SPEC §2, §3.1 (lexical) / D-LEX-06 escape sequences / D-DIAG-02 E0003
+# The unsupported escape `\z` produces E0003 (invalid escape sequence).
+
+x = "invalid escape: \z"

@@ -1,0 +1,6 @@
+# Verifies: SPEC §2 (lexical/layout) / D-SYN-01 strict indentation checking / D-DIAG-02 E0501
+# An intermediate indent (+2) relative to the previous non-blank line, other than
+# +4/-4 (multiples of 4), is a syntax error E0501 (indentation mismatch).
+
+def compute(): int
+  return 1

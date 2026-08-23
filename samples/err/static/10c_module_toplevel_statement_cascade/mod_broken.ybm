@@ -1,0 +1,11 @@
+module
+
+# Verifies: SPEC §10 "a module holds only declarations (def / struct / enum / constants); top-level executable statements are forbidden"
+# Decisions: DECISIONS.md D-DIAG-02 (E5002 = a top-level executable statement inside a module)
+#
+# print(...) is a top-level executable statement, and only declarations
+# (def/struct/enum/constant) are allowed under a module directive, so this is E5002.
+# By including only the executable statement and no declaration, this avoids
+# incidental diagnostics such as an unused function (E4002).
+
+print("module load side effect - forbidden by SPEC section 10")

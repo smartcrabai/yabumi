@@ -1,0 +1,38 @@
+#!/usr/bin/env ybm
+
+# SPEC 11.2 math verification: asserts the success cases of checked_div/checked_mod/
+# checked_add/checked_sub/checked_mul, and each of abs_int/abs_float/min_int/max_int/
+# min_float/max_float/floor/ceil/round/sqrt/pow once with a fixed input, then finally
+# asserts math.PI/math.E by comparison against a range of known approximate values.
+# STDLIB.md §12 math -- effect: none (pure).
+# checked_* are the safe versions of the dangerous operations (/, %, +, -, *) that
+# D-ERR-04/D-STDPOL-08 define; here, only inputs for which Option.unwrap() succeeds
+# (never panics) are used.
+# Since DECISIONS.md doesn't specify round()'s rounding direction for .5 (round half to
+# even, or away from zero), only inputs avoiding the boundary value (.5) are verified.
+# Since a typical floating-point pow implementation isn't guaranteed to match a result
+# bit-for-bit exactly, this is verified via a tolerance-based range comparison (sqrt is
+# verified with exact equality, since it's specified to be correctly rounded per IEEE 754).
+
+assert(math.checked_div(10, 3).unwrap() == 3)
+assert(math.checked_mod(10, 3).unwrap() == 1)
+assert(math.checked_add(2, 3).unwrap() == 5)
+assert(math.checked_sub(5, 3).unwrap() == 2)
+assert(math.checked_mul(4, 5).unwrap() == 20)
+
+assert(math.abs_int(-7) == 7)
+assert(math.abs_float(-2.5) == 2.5)
+assert(math.min_int(3, 7) == 3)
+assert(math.max_int(3, 7) == 7)
+assert(math.min_float(3.5, 7.5) == 3.5)
+assert(math.max_float(3.5, 7.5) == 7.5)
+assert(math.floor(3.7) == 3)
+assert(math.ceil(3.2) == 4)
+assert(math.round(3.2) == 3)
+assert(math.sqrt(16.0) == 4.0)
+assert(math.pow(2.0, 10.0) > 1023.99 and math.pow(2.0, 10.0) < 1024.01)
+
+assert(math.PI > 3.14 and math.PI < 3.15)
+assert(math.E > 2.71 and math.E < 2.72)
+
+print("math ok")

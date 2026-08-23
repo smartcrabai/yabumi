@@ -1,0 +1,7 @@
+# Verifies: SPEC §3.1 (integer literals) / D-LEX-03 integer literals / D-DIAG-02 E0004
+# Integer literals follow the grammar `[0-9][0-9_]*`; a leading, trailing, or
+# consecutive `_` is a lexical error. A leading underscore is structurally unreachable
+# by the grammar (the first character is always a digit), so this file combines the
+# trailing-underscore and consecutive-underscore patterns into a single literal.
+
+x = 1_000__

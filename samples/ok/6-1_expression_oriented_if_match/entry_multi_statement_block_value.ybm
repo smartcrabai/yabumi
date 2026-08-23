@@ -1,0 +1,26 @@
+# Verifies DECISIONS D-SYN-11 (the block-value rule for a multi-statement arm).
+# Asserts that when an if/match branch, via a newline + indent after `=>`, consists of
+# multiple statements interspersed with a var declaration or intermediate computation,
+# the final expression statement's value becomes the whole block's value.
+
+n = 7
+
+category = if n % 2 == 0
+    var half = n / 2
+    doubled_half = half * 2
+    f"even:{doubled_half}"
+else
+    var cube = n * n * n
+    adjusted = cube - 1
+    f"odd:{adjusted}"
+
+assert(category == "odd:342")
+
+kind = match n
+    0 => "zero"
+    _ =>
+        var abs_n = n
+        squared = abs_n * abs_n
+        f"nonzero:{squared}"
+
+assert(kind == "nonzero:49")

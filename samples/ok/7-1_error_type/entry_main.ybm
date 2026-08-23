@@ -1,0 +1,25 @@
+#!/usr/bin/env ybm
+
+# SPEC §7.1 (Error type) verification: construction that requires stating `cause`
+# explicitly, as in `Error(kind: ..., message: ..., cause: None)`; chain construction
+# via `cause: Some(innerError)`; and direct access to the `.kind` / `.message` / `.cause`
+# fields (D-STDPOL-05: no factory methods; state `None` explicitly every time even when there is no `cause`).
+
+root_cause = Error(kind: "net", message: "connection refused", cause: None)
+assert(root_cause.kind == "net", "kind field should be directly accessible")
+assert(root_cause.message == "connection refused", "message field should be directly accessible")
+assert(root_cause.cause.is_none(), "cause: None means no underlying error")
+
+wrapped = Error(kind: "fs", message: "failed to write cache", cause: Some(root_cause))
+assert(wrapped.kind == "fs", "outer error kind")
+assert(wrapped.message == "failed to write cache", "outer error message")
+assert(wrapped.cause.is_some(), "cause: Some(...) chains to an inner Error")
+
+inner = wrapped.cause.unwrap()
+assert(inner.kind == "net", "unwrapped cause should be the original root_cause")
+assert(inner.message == "connection refused", "unwrapped cause message should match root_cause")
+assert(inner.cause.is_none(), "root_cause itself has no further cause")
+
+top = Error(kind: "decode", message: "invalid response", cause: Some(wrapped))
+assert(top.cause.unwrap().kind == "fs", "top -> wrapped -> root_cause is a 3-level cause chain")
+assert(top.cause.unwrap().cause.unwrap().kind == "net", "deep chain access via repeated .cause.unwrap()")

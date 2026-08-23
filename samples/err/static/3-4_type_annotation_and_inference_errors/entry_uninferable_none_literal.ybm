@@ -1,0 +1,7 @@
+# Verifies: SPEC §3.4 (scope of required type annotations) / D-TYPE-15 uninferable-type
+# conditions (2. a bare None initialization) / D-DIAG-02 E1003
+# `x = None` leaves Option[T]'s T undetermined and uninferable. Unless annotated like
+# `x: Option[T] = None`, this produces E1003.
+
+x = None
+print(x.is_none())

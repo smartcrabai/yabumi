@@ -1,0 +1,8 @@
+# module summary without space after hash
+a = 1 # computed base value with extra spaces
+## compute double of a value
+def double(x: int): int
+    return x * 2
+
+b = double(a) # trailing tight comment
+print(str(b))

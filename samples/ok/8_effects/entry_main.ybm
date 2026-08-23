@@ -1,0 +1,41 @@
+#!/usr/bin/env ybm
+
+# Verifies SPEC 8's effect system.
+# D-EFF-01: effect checking is static only.
+# - write_note: a function declaring the single effect `uses {fs}`
+# - try_connect: a function declaring the single effect `uses {net}`
+# - probe: calls both, declaring `uses {fs, net}` (their sum)
+# - apply/read_len_via_apply: passes an effectful lambda to the higher-order function
+# apply, which has a type parameter `f: (T) -> U`, and shows it implicitly propagates
+# to the caller read_len_via_apply's effect (`uses {fs}`) (D-FUNC-03)
+# To avoid depending on network reachability, url uses an invalid URL string,
+# making the result deterministic by relying on try_connect always returning Err.
+
+def write_note(path: str, content: str): Option[Error] uses {fs}
+    return fs.write(path, content)
+
+def try_connect(url: str): Result[int, Error] uses {net}
+    resp = http.get(url)?
+    return Ok(resp.status)
+
+def probe(path: str, content: str, url: str): Result[bool, Error] uses {fs, net}
+    write_note(path, content)
+    status_result = try_connect(url)
+    return Ok(status_result.is_err())
+
+def apply[T, U](x: T, f: (T) -> U): U
+    return f(x)
+
+def read_len_via_apply(path: str): int uses {fs}
+    return apply(path, (p) => fs.read(p).unwrap_or("").len())
+
+note_path = "_out/effects_note.txt"
+note_content = "hello from effects sample"
+result = probe(note_path, note_content, "this-is-not-a-valid-url")
+assert(result.is_ok())
+assert(result.unwrap(), "try_connect should fail on an invalid url, so probe returns Ok(true)")
+
+length = read_len_via_apply(note_path)
+assert(length == note_content.len())
+
+print("effects ok")

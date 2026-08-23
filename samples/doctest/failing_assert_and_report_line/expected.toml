@@ -1,0 +1,20 @@
+# Verifies: SPEC §13, §7.5 / D-DOC-04, D-DOC-05
+
+[[case]]
+id = "test_fail_then_independent_pass"
+entry = "entry_main.ybm"
+cmd = "test"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "E6004" }
+doc_blocks = [
+    { line = 11, result = "fail", code = "E6004" },
+    { line = 19, result = "pass" },
+]
+requires_env = []
+notes = "The 2nd line inside double's block, assert(double(3) == 100), fails (double(3) is 6, so this is false). Per D-DOC-04, after the 1st line's assert(double(2) == 4) succeeds, this 2nd line ends the block immediately and reports fail. Per D-DOC-05, the report line is not the block's start (the ``` on line 9) nor the 1st assert (line 10), but the actual source-file line number of the assert that failed (line 11, the 2nd line). The separately declared shout doc block is unaffected by this fail and passes independently (D-DOC-04)."

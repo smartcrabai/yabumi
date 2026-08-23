@@ -1,0 +1,14 @@
+# SPEC §1 (CLI): a minimal sample confirming that the 4 subcommand invocation patterns
+# ybm / ybm check / ybm check --check / ybm test all complete with exit 0 against the same file.
+# Referenced decisions: D-CLI-01 (diagnostics go to stderr) / D-CLI-02 (--check flag position) / D-CLI-03 (report every diagnostic)
+
+## Adds two ints. The doc test block's verification follows the same form as SPEC §13.
+##
+## ```
+## assert(add(1, 2) == 3)
+## ```
+def add(a: int, b: int): int
+    return a + b
+
+result = add(1, 2)
+assert(result == 3)

@@ -1,0 +1,21 @@
+#!/usr/bin/env ybm
+
+# Verifies SPEC 9 / D-PAR-01's input-order guarantee for fixed-arity par.
+# `par [f(), g(), ...]` returns a homogeneous list[T], and `par (f(), g())` returns a
+# heterogeneous tuple; asserts that both align their results in the order written
+# (input order), not completion order.
+
+def double(x: int): int
+    return x * 2
+
+def shout(s: str): str
+    return s.to_upper()
+
+results_list = par [double(3), double(4), double(5)]
+assert(results_list == [6, 8, 10])
+
+results_tuple = par (double(7), shout("hi"))
+assert(results_tuple.0 == 14)
+assert(results_tuple.1 == "HI")
+
+print("par fixed arity ok")

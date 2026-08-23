@@ -1,0 +1,27 @@
+# Verifies SPEC.md §3.6's generalization of generics (attaching type parameters to struct/enum).
+# Applies the same [T] notation D-TYPE-09 shows for the built-in enums Result[T, E]/
+# Option[T] to a user-defined struct/enum, constructs it with different concrete types
+# (int/str/float/bool), and asserts that field/variant access works.
+
+struct Box[T]
+    value: T
+
+enum Pair[A, B]
+    Both(A, B)
+
+box_int = Box(value: 1)
+box_str = Box(value: "hello")
+box_float = Box(value: 3.14)
+assert(box_int.value == 1)
+assert(box_str.value == "hello")
+assert(box_float.value == 3.14)
+
+# An enum variant is always constructed with positional arguments (D-SYN-07). Type arguments A/B are inferred from the actual arguments.
+pair_int_str = Both(1, "one")
+pair_float_bool = Both(3.14, true)
+
+match pair_int_str
+    Both(a, b) => assert(a == 1 and b == "one")
+
+match pair_float_bool
+    Both(x, y) => assert(x == 3.14 and y == true)

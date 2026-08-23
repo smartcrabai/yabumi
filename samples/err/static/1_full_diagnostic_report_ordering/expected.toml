@@ -1,0 +1,15 @@
+[[case]]
+id = "check_reports_all_three_errors_in_order"
+entry = "entry_multiple_independent_errors.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1002", "E1050", "E1021"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Confirms that the 3 independent errors -- a missing function parameter type annotation (E1002), mixed int/float arithmetic (E1050), and a match exhaustiveness violation (E1021) -- located at different positions are all reported in one check, in ascending file:line:col order (i.e. source appearance order) per D-CLI-03. Since ybm check never executes, stdout is always empty."

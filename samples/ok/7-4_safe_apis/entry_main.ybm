@@ -1,0 +1,63 @@
+#!/usr/bin/env ybm
+
+# SPEC §7.4 (no panics) verification: uses `xs.get(i)` / `m.get(k)` / `math.checked_div`
+# / `checked_mod` / `checked_add` / `checked_sub` / `checked_mul`, returning Option
+# exactly per DECISIONS D-STDPOL-08's correspondence table, avoiding out-of-range
+# access, division by zero, and integer overflow without the dangerous versions
+# (`xs[i]` / `a / b` / `a % b` / `a + b` / `a - b` / `a * b`).
+
+xs = [10, 20, 30]
+
+# xs.get(i): Some within range, None out of range (avoids the immediate termination E6001 that xs[i] would cause)
+in_range = xs.get(1)
+assert(in_range.is_some(), "get(1) on a 3-element list should be Some")
+assert(in_range.unwrap() == 20, "get(1) should return the second element")
+
+out_of_range = xs.get(10)
+assert(out_of_range.is_none(), "get(10) is out of range -> None, no panic")
+
+m = {"a": 1, "b": 2}
+
+# m.get(k): Some if present, None if absent (avoids the immediate termination E6001 that m[k] would cause)
+present = m.get("a")
+assert(present.is_some(), "get(\"a\") on a present key should be Some")
+assert(present.unwrap() == 1, "get(\"a\") should return 1")
+
+absent = m.get("z")
+assert(absent.is_none(), "get(\"z\") on a missing key -> None, no panic")
+
+# math.checked_div / checked_mod: avoids division by zero (the immediate termination E6002 that a / b, a % b would cause)
+ok_div = math.checked_div(10, 2)
+assert(ok_div.is_some(), "10 / 2 should succeed")
+assert(ok_div.unwrap() == 5, "10 / 2 == 5")
+
+zero_div = math.checked_div(10, 0)
+assert(zero_div.is_none(), "division by zero -> None, no panic")
+
+zero_mod = math.checked_mod(10, 0)
+assert(zero_mod.is_none(), "modulo by zero -> None, no panic")
+
+ok_mod = math.checked_mod(10, 3)
+assert(ok_mod.unwrap() == 1, "10 % 3 == 1")
+
+# math.checked_add / checked_sub / checked_mul: avoids i64 overflow (immediate termination E6003)
+i64_max = 9223372036854775807
+i64_min = -i64_max - 1
+
+overflow_add = math.checked_add(i64_max, 1)
+assert(overflow_add.is_none(), "i64_max + 1 overflows -> None, no panic")
+
+ok_add = math.checked_add(1, 2)
+assert(ok_add.unwrap() == 3, "1 + 2 == 3")
+
+overflow_mul = math.checked_mul(i64_max, 2)
+assert(overflow_mul.is_none(), "i64_max * 2 overflows -> None, no panic")
+
+ok_mul = math.checked_mul(3, 4)
+assert(ok_mul.unwrap() == 12, "3 * 4 == 12")
+
+overflow_sub = math.checked_sub(i64_min, 1)
+assert(overflow_sub.is_none(), "i64_min - 1 underflows -> None, no panic")
+
+ok_sub = math.checked_sub(10, 4)
+assert(ok_sub.unwrap() == 6, "10 - 4 == 6")

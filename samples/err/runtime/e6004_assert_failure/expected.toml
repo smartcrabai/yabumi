@@ -1,0 +1,18 @@
+# Verifies: SPEC §7.5 / DECISIONS D-ERR-04 item 5, D-DIAG-02 (E6004)
+# Confirms that calling assert(cond, msg) with cond=false terminates immediately with E6004.
+
+[[case]]
+id = "assert_fails"
+entry = "entry_assert_fails.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E6004"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E6004]" }
+doc_blocks = []
+requires_env = []
+notes = "Confirms that assert(false, \"this assertion always fails\") always fails and terminates immediately with E6004."

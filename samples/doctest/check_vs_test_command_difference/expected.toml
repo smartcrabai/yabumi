@@ -1,0 +1,35 @@
+# Verifies: SPEC §1, §13
+
+[[case]]
+id = "check_typechecks_doc_block_without_running"
+entry = "entry_main.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "assert(square(3) == 100) inside square's doc block type-checks (int == int), so `ybm check` exits 0. Per §13 (\"ybm check only type-checks and does not run\"), it never detects that square(3) is actually 9 at runtime."
+
+[[case]]
+id = "test_runs_doc_block_and_catches_runtime_failure"
+entry = "entry_main.ybm"
+cmd = "test"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "E6004" }
+doc_blocks = [
+    { line = 10, result = "fail", code = "E6004" },
+]
+requires_env = []
+notes = "Running the same square doc block for real with `ybm test`, square(3) == 9 so assert(square(3) == 100) is false, failing with E6004 and exiting 1. This is where the runtime mismatch that `check` could not catch is finally detected."

@@ -1,0 +1,13 @@
+# Verifies: SPEC §12, DECISIONS D-FMT-02
+# A string is always output double-quoted (single quotes don't exist lexically, so
+# they're out of scope); confirms that an internal \" escape is neither unescaped nor
+# changed by fmt and is preserved as-is. Other elements on the line (spacing around =,
+# etc., D-FMT-01) are formatted as usual.
+prefix="say \"hi\""
+suffix="\"bye\" now"
+combined=prefix+suffix
+label=f"value: \"{combined}\""
+print(prefix)
+print(suffix)
+print(combined)
+print(label)

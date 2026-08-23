@@ -1,0 +1,22 @@
+# Verifies: SPEC §13, §7.5 / D-DOC-04, D-ERR-04 (rule 5), D-ERR-05
+# An assert failure immediately ends that block's execution and reports fail (D-DOC-04).
+# Confirms, by failing the assert on the block's 2nd line, that the fail report's line
+# points not at the block's start but at the source-file line number of the assert that actually failed (D-DOC-05).
+# Also confirms that a fail in one block does not affect the result of another (separately declared) doc block (D-DOC-04).
+
+## Doubles an integer.
+##
+## ```
+## assert(double(2) == 4)
+## assert(double(3) == 100)
+## ```
+def double(n: int): int
+    return n * 2
+
+## Uppercases a string.
+##
+## ```
+## assert(shout("hi") == "HI")
+## ```
+def shout(s: str): str
+    return s.to_upper()

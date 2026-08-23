@@ -1,0 +1,52 @@
+# Expected results for fmt/pipe_multiline_splitting
+# Verifies: SPEC §6.3/§12, DECISIONS D-FMT-04 (splits a pipe of 2+ stages into 1 stage
+# per line; a single-stage pipe stays on the same line). Continuation-line indent
+# follows D-SYN-05 (base line + 4).
+
+[[case]]
+id = "check_splits_multi_stage_pipe"
+entry = "sample.in.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = "sample.out.ybm"
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "The 3-stage chained is split to 1 stage per line (D-FMT-04), while the 1-stage single stays on the same line. Continuation-line indent is base line + 4 (D-SYN-05)."
+
+[[case]]
+id = "check_diff_detects_unsplit_pipe"
+entry = "sample.in.ybm"
+cmd = "check_diff"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = []
+fmt_diff_expected = true
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "ybm check --check judges the non-canonical form as having a diff and exits 1 (D-CLI-02)."
+
+[[case]]
+id = "check_diff_idempotent_on_canonical_form"
+entry = "sample.out.ybm"
+cmd = "check_diff"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Against sample.out.ybm, already in canonical form, there is no diff (fmt(fmt(x)) = fmt(x))."

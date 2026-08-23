@@ -1,0 +1,28 @@
+#!/usr/bin/env ybm
+
+# SPEC 7.5 assert verification.
+# D-STDPOL-01: calls both the 1-argument form assert(cond) (auto-displays the condition
+# expression's source text on failure) and the 2-argument form assert(cond, msg)
+# (displays msg on failure) multiple times with conditions that succeed (since all
+# succeed, the displayed content itself is never observed in this case).
+
+def add(a: int, b: int): int
+    return a + b
+
+x = add(2, 3)
+assert(x == 5)
+assert(x == 5, "add(2, 3) is expected to be 5")
+
+name = "yabumi"
+assert(name.len() == 6)
+assert(name.starts_with("ya"), "name should start with ya")
+
+xs = [1, 2, 3]
+assert(xs.sum() == 6)
+assert(xs.contains(2), "xs should contain 2")
+
+flag = true
+assert(flag)
+assert(flag, "flag should be true")
+
+print("all assertions passed")

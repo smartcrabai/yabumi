@@ -1,0 +1,22 @@
+# Verifies: SPEC §10 module directive syntax, DECISIONS.md D-LEX-08 / D-LEX-09 / D-MOD-01
+#
+# Note: since mod_bad_directive.ybm's test target is itself "line 1 of the file being
+# wrong as a directive", it deliberately omits the common header comment (stating the
+# SPEC section under test). Since D-LEX-09 skips only the shebang and uses the
+# effective line 1 for directive detection, placing a comment line at the top would turn the "effective line 1" into a comment and shift what's under test. This is noted explicitly in this file.
+
+[[case]]
+id = "check_malformed_module_directive"
+entry = "entry_probe.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E5001"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E5001]" }
+doc_blocks = []
+requires_env = []
+notes = "entry_probe.ybm itself has no module directive and is correct on its own. The same-directory mod_bad_directive.ybm's line 1 is `module foo` (with a name), violating D-LEX-08's \"fixed as the bare keyword with no name\", producing E5001 (per D-MOD-01 it becomes an auto-import scan target, so the whole check fails)."

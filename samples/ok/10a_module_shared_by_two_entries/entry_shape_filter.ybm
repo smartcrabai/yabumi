@@ -1,0 +1,17 @@
+#!/usr/bin/env ybm
+
+# SPEC 10 verification: uses the same mod_shapes.ybm types to compute and print a list of shapes filtered by area.
+# An entry independent of entry_area_report.ybm, but auto-imports the same shared module (D-MOD-01/03/04).
+
+shapes = [
+    NamedShape(name: "circle-a", shape: Circle(2.0)),
+    NamedShape(name: "rect-a", shape: Rect(3.0, 4.0)),
+    NamedShape(name: "circle-b", shape: Circle(1.0)),
+    NamedShape(name: "rect-b", shape: Rect(1.0, 1.0)),
+]
+
+large = shapes.filter((s) => area(s.shape) > 5.0)
+assert(large.count() == 2)
+
+large_names = large.map((s) => s.name).join(", ")
+print(f"large shapes: {large_names}")

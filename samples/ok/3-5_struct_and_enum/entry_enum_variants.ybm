@@ -1,0 +1,34 @@
+# SPEC §3.5: verifies constructing an enum mixing field-carrying variants (constructed
+# with positional arguments) and a unit variant, its match-decomposition, and a match satisfying exhaustiveness
+# Referenced decisions: D-SYN-07 (an enum is always constructed/decomposed with
+# positional arguments; a unit variant omits the parentheses)
+# D-TYPE-12 (mixing field-carrying and unit variants)
+
+enum Shape
+    Circle(float)
+    Rect(float, float)
+    Point
+
+def area(s: Shape): float
+    return match s
+        Circle(r) => 3.14 * r * r
+        Rect(w, h) => w * h
+        Point => 0.0
+
+def label(s: Shape): str
+    return match s
+        Circle(radius) => f"circle r={radius}"
+        Rect(width, height) => f"rect {width}x{height}"
+        Point => "point"
+
+c: Shape = Circle(1.0)
+rect_shape: Shape = Rect(3.0, 4.0)
+p: Shape = Point
+
+assert(area(c) == 3.14)
+assert(area(rect_shape) == 12.0)
+assert(area(p) == 0.0)
+
+assert(label(c) == "circle r=1.0")
+assert(label(rect_shape) == "rect 3.0x4.0")
+assert(label(p) == "point")

@@ -1,0 +1,34 @@
+# err/static/9_par_branch_bare_question_operator
+# Verifies: SPEC §7.2/§9. A bare `?` inside a par branch is forbidden (D-PAR-03).
+
+[[case]]
+id = "par_literal_bare_question"
+entry = "entry_par_literal_bare_question.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E0502"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E0502]" }
+doc_blocks = []
+requires_env = []
+notes = "Writing `?` directly on a branch expression in a par [...] literal is forbidden, E0502 (D-PAR-03)"
+
+[[case]]
+id = "par_map_lambda_bare_question"
+entry = "entry_par_map_lambda_bare_question.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1061"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E1061]" }
+doc_blocks = []
+requires_env = []
+notes = "A list.par_map lambda cannot propagate with `?`; receiver-aware checking reports E1061."

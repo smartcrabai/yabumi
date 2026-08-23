@@ -1,0 +1,15 @@
+#!/usr/bin/env ybm
+# Verifies: SPEC §6.4 (states comparison is structural equality `==` only; the types
+# eligible for ordering comparison are defined separately)
+# Decisions: DECISIONS D-OP-05 (`<` `>` `<=` `>=` are defined only for int/float/str; undefined for struct, so E1051)
+#
+# Uses `<` on struct Point, and verifies this reports E1051 (using a type that cannot be ordering-compared).
+
+struct Point
+    x: int
+    y: int
+
+p1 = Point(x: 1, y: 2)
+p2 = Point(x: 3, y: 4)
+result = p1 < p2
+print(result)

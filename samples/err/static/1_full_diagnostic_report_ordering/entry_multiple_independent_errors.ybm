@@ -1,0 +1,29 @@
+# Verifies: SPEC §1 (CLI, reporting all diagnostics) / D-CLI-03
+# Embeds 3 independent errors (E1002 / E1050 / E1021) in one file on different
+# lines, confirming that all 3 are reported by a single `ybm check` in ascending
+# file:line:col order.
+
+# E1002: function parameter x has no type annotation (SPEC §3.4 / D-TYPE-11)
+def add_one_untyped(x): int
+    return x + 1
+
+# E1050: mixed int and float arithmetic (SPEC §3.1 / D-OP-03)
+def mix_int_float(): int
+    a = 1
+    b = 2.0
+    return a + b
+
+enum Color
+    Red
+    Green
+    Blue
+
+# E1021: match exhaustiveness violation (the Blue arm is missing. SPEC §6.1 / D-TYPE-09)
+def color_label(c: Color): str
+    return match c
+        Red => "red"
+        Green => "green"
+
+print(add_one_untyped(5))
+print(mix_int_float())
+print(color_label(Blue))

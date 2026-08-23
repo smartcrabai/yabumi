@@ -1,0 +1,39 @@
+# Verifies SPEC.md §4's variables and mutability.
+# Asserts immutable-by-default (a binding without var cannot be reassigned),
+# reassignment via var, a field rewrite on a var-bound struct (D-MUT-02/03),
+# push/pop on a var list (destructive methods, D-MUT-01/02, which require the caller's
+# variable to be a var binding), and subscript assignment `xs[i] = v` / `m[k] = v` on a var list/dict (D-COL-02).
+
+struct User
+    name: str
+    age: int
+
+x = 5
+assert(x == 5)
+
+var y = 5
+y = 6
+assert(y == 6)
+
+var u = User(name: "alice", age: 3)
+u.age = 4
+assert(u.age == 4)
+assert(u.name == "alice")
+
+var xs: list[int] = [1, 2]
+xs.push(3)
+assert(xs == [1, 2, 3])
+
+popped = xs.pop()
+assert(popped.unwrap() == 3)
+assert(xs == [1, 2])
+
+var ys: list[int] = [10, 20, 30]
+ys[1] = 99
+assert(ys == [10, 99, 30])
+
+var scores: dict[str, int] = {"alice": 1}
+scores["alice"] = 2
+scores["bob"] = 5
+assert(scores.get("alice").unwrap() == 2)
+assert(scores.get("bob").unwrap() == 5)

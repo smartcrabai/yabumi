@@ -1,0 +1,52 @@
+#!/usr/bin/env ybm
+
+# SPEC §7.2 (`?` operator) verification: `expr?` inside a Result-returning function,
+# `expr?` inside an Option-returning function, postfix `?` on each pipe stage, and `?`
+# inside a lambda body (D-ERR-02: `?`'s scope is the innermost function = the lambda
+# itself, matched against the return type determined from the call context).
+
+# `?` inside a Result-returning function (D-TYPE-17's implicit Ok wrap: n * 2 is a bare int)
+def parse_and_double(s: str): Result[int, Error]
+    n = s.parse_int()?
+    return n * 2
+
+r = parse_and_double("21")
+assert(r.is_ok(), "parse_and_double(\"21\") should succeed")
+assert(r.unwrap() == 42, "21 parsed then doubled == 42")
+
+# `?` inside an Option-returning function (D-TYPE-17's implicit Some wrap: to_upper() is a bare str)
+def first_upper(xs: list[str]): Option[str]
+    head = xs.first()?
+    return head.to_upper()
+
+opt = first_upper(["ya", "bu", "mi"])
+assert(opt.is_some(), "first_upper of a non-empty list should be Some")
+assert(opt.unwrap() == "YA", "first element upper-cased")
+
+empty_opt = first_upper([])
+assert(empty_opt.is_none(), "first_upper of an empty list propagates None via ?")
+
+# Postfix `?` on each pipe stage
+def to_int(s: str): Result[int, Error]
+    return s.parse_int()
+
+def to_positive(v: int): Result[int, Error]
+    if v > 0
+        return Ok(v)
+    else
+        return Err(Error(kind: "decode", message: "not positive", cause: None))
+
+piped = "10" |> to_int? |> to_positive?
+assert(piped == 10, "postfix ? on each pipe stage threads the unwrapped value through")
+
+# `?` inside a lambda body (D-ERR-02): the lambda's return type is determined from the
+# call context (apply_to_each's `f: (str) -> Result[int, Error]`). `?` applies to that
+# "innermost function", the lambda itself, and if it returns Err, the lambda itself
+# returns Err right there (it does not propagate to the caller, apply_to_each).
+def apply_to_each(xs: list[str], f: (str) -> Result[int, Error]): list[Result[int, Error]]
+    return xs.map(f)
+
+lambda_results = apply_to_each(["30", "x", "5"], (s) => s.parse_int()?.to_str().parse_int())
+assert(lambda_results.get(0).unwrap().unwrap() == 30, "first lambda-parsed value should be 30")
+assert(lambda_results.get(1).unwrap().is_err(), "\"x\" fails to parse; the lambda's own ? returns Err from within the lambda")
+assert(lambda_results.get(2).unwrap().unwrap() == 5, "third lambda-parsed value should be 5")

@@ -1,0 +1,21 @@
+# Verifies: SPEC §9 (concurrent execution) / §7.4 (no panics) / DECISIONS D-ERR-06
+# Confirms that when one par branch (cause_panic) causes a division-by-zero panic
+# (E6002), the whole process terminates immediately without waiting for the other
+# branch (slow_branch) to finish. slow_branch prints after a sleep, so if it were
+# waited for, "slow branch finished" would appear in stdout, but because the process terminates immediately, stdout is empty.
+
+[[case]]
+id = "par_branch_panics_immediately"
+entry = "entry_par_branch_panics.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E6002"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E6002]" }
+doc_blocks = []
+requires_env = []
+notes = "Confirms that cause_panic()'s integer division-by-zero panic, per D-ERR-06, causes the process to terminate immediately, so neither slow_branch()'s post-sleep print(\"slow branch finished\") nor the print after par (the unreachable line) ever produce output (stdout is completely empty)."

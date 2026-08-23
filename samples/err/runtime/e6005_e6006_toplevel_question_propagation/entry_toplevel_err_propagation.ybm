@@ -1,0 +1,9 @@
+# Verifies: SPEC §7.2 (`?` operator) / DECISIONS D-ERR-04/D-ERR-05, D-DIAG-02 (E6005)
+# Applying `?` in a top-level statement to a Result expression that returns Err propagates
+# the Err, printing an error to stderr and exiting 1 (SPEC §7.2 "top-level `?`:
+# on Err, print to stderr and exit 1").
+
+def always_fails(): Result[int, Error]
+    return Err(Error(kind: "test", message: "always fails", cause: None))
+
+unwrapped = always_fails()?

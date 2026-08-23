@@ -1,0 +1,15 @@
+#!/usr/bin/env ybm
+# Verifies: SPEC §8 (a function with no uses declaration is a pure function; calling an
+# effectful function from a pure function is a type error)
+# Decisions: DECISIONS D-EFF-01 (a direct call from a pure function to an effectful
+#       function is E2001 at type-check time)
+#
+# load_config has no uses declaration (i.e. is pure), yet its body directly calls
+# `fs.read`, which carries the effect `fs`. Verifies that this reports E2001.
+
+def load_config(path: str): str
+    content = fs.read(path)
+    return content.unwrap_or("")
+
+output = load_config("config.txt")
+print(output)

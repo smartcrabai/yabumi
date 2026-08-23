@@ -1,0 +1,18 @@
+# Verifies: SPEC §12, DECISIONS D-LINT-01 (E4001 unused local variable)
+# Follows the schema in SAMPLES_PLAN.md §1.3.
+
+[[case]]
+id = "check_reports_unused_local"
+entry = "entry_unused_local.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E4001"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E4001]" }
+doc_blocks = []
+requires_env = []
+notes = "ybm check only runs right after type-checking, so at this stage entry_unused_local.ybm's top-level executable statement (print) does not run (per the CLI table: check does not execute), hence stdout is empty. x in x = n * 2 is unused, so E4001 is reported exactly once."

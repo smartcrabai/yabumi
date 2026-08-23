@@ -1,0 +1,20 @@
+# Verifies: SPEC §13 / D-DOC-01, D-DOC-02
+
+[[case]]
+id = "test_multi_blocks_pass"
+entry = "entry_main.ybm"
+cmd = "test"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = [
+    { line = 9, result = "pass" },
+    { line = 21, result = "pass" },
+]
+requires_env = []
+notes = "add's doc comment has 2 untagged assert blocks and 1 json-tagged block. The json block is ignored per D-DOC-01, and only the 2 untagged blocks are counted individually as pass per D-DOC-02."

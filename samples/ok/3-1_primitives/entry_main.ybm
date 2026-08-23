@@ -1,0 +1,43 @@
+# SPEC §3.1: verifies basic operations (arithmetic, ordering comparison, logical operators) on int/float/bool/str
+# Referenced decisions: D-OP-04 (/ % semantics; %'s sign follows the left operand) / D-OP-05 (ordering comparison is int/float/str only)
+# D-OP-06 (== is structural equality across every type) / D-OP-07 (+ 's supported types)
+
+# int arithmetic (D-OP-04)
+assert(2 + 3 == 5)
+assert(7 - 2 == 5)
+assert(4 * 3 == 12)
+assert(7 / 2 == 3)
+assert(-7 / 2 == -3)
+assert(7 % 2 == 1)
+assert(-7 % 3 == -1)
+
+# float arithmetic
+assert(2.5 + 1.5 == 4.0)
+assert(5.0 - 1.5 == 3.5)
+assert(2.0 * 3.0 == 6.0)
+assert(7.0 / 2.0 == 3.5)
+
+# Ordering comparison (int/float/str only, D-OP-05)
+assert(3 < 5)
+assert(5 <= 5)
+assert(9 > 2)
+assert(2 >= 2)
+assert(2.5 < 3.5)
+assert("apple" < "banana")
+
+# bool and logical operators (and/or/not)
+t = true
+f = false
+assert(t and not f)
+assert(f or t)
+assert(not f)
+
+# str concatenation (+ only, D-OP-07)
+assert("foo" + "bar" == "foobar")
+
+# == is structural equality across every type (D-OP-06)
+assert(3 == 3)
+assert(3.0 == 3.0)
+assert(true == true)
+assert("x" == "x")
+assert(3 != 4)

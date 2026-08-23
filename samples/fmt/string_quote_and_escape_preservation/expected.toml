@@ -1,0 +1,52 @@
+# Expected results for fmt/string_quote_and_escape_preservation
+# Verifies: SPEC §12, DECISIONS D-FMT-02 (double-quote normalization, preserving the \" escape)
+# Confirms that a string literal's body (including a \" escape) stays byte-identical
+# across fmt, and only the surrounding spacing (around =, etc., D-FMT-01) is normalized.
+
+[[case]]
+id = "check_preserves_escapes_and_normalizes_spacing"
+entry = "sample.in.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = "sample.out.ybm"
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "ybm check's in-place formatting result byte-matches sample.out.ybm (D-FMT-02). The \\\" escape is neither unescaped nor altered."
+
+[[case]]
+id = "check_diff_detects_nonstandard_spacing"
+entry = "sample.in.ybm"
+cmd = "check_diff"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = []
+fmt_diff_expected = true
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "ybm check --check judges the non-canonical form as having a diff and exits 1 (D-CLI-02)."
+
+[[case]]
+id = "check_diff_idempotent_on_canonical_form"
+entry = "sample.out.ybm"
+cmd = "check_diff"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Against sample.out.ybm, already in canonical form, there is no diff (fmt(fmt(x)) = fmt(x)). Confirms idempotency holds even for a string containing an escape."

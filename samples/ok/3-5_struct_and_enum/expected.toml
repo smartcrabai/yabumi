@@ -1,0 +1,34 @@
+# SPEC §3.5: confirms that struct (combined methods, named-argument construction) and
+# enum (positional-argument construction, match) both work correctly.
+
+[[case]]
+id = "run_struct_methods_ok"
+entry = "entry_struct_methods.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Constructs, with named arguments, a struct having a non-var-self read method (describe) and a var-self mutating method (increment), and asserts the results of calling both methods."
+
+[[case]]
+id = "run_enum_variants_ok"
+entry = "entry_enum_variants.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Constructs an enum mixing field-carrying variants (Circle/Rect, constructed with positional arguments) and a unit variant (Point, no parentheses), and asserts the result of an exhaustive match-decomposition."

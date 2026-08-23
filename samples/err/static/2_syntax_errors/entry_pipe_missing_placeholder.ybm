@@ -1,0 +1,8 @@
+# Verifies: SPEC §6.3 (pipe) / D-DIAG-02 E0503
+# When a pipe target stage takes parenthesized arguments, an explicit `_` placeholder
+# is required (there is no implicit first-argument insertion). Omitting it produces E0503.
+
+def build_payload(): str
+    return "hello"
+
+build_payload() |> fs.write("out.json")

@@ -1,0 +1,13 @@
+# Verifies: SPEC §1, §13
+# Contrasts that `ybm check` only type-checks doc test blocks without running them,
+# while `ybm test` actually runs them and can therefore detect this assert failure.
+# The square doc block is correct as a type (int == int comparison), but
+# fails at runtime: assert(square(3) == 100) does not hold (square(3) is 9).
+
+## Returns n squared.
+##
+## ```
+## assert(square(3) == 100)
+## ```
+def square(n: int): int
+    return n * n

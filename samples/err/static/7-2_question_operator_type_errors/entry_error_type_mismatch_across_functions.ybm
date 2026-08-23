@@ -1,0 +1,20 @@
+#!/usr/bin/env ybm
+# Verifies: SPEC §7.1 (`?` passes through with no type conversion), §7.2 (`?`'s Result/Option support)
+# Decisions: DECISIONS D-ERR-01 (the error type E' that `?` targets must exactly match
+#       the function's E annotation; a mismatch is E1060)
+#
+# parse_code returns Result[int, str] (E = str). load_code returns Result[int, Error]
+# (E = Error). Using parse_code(s)? inside load_code, the error type that passes
+# through (str) doesn't match load_code's E annotation (Error), so verifies this reports E1060.
+
+def parse_code(s: str): Result[int, str]
+    return match s
+        "bad" => Err("invalid")
+        _ => Ok(1)
+
+def load_code(s: str): Result[int, Error]
+    n = parse_code(s)?
+    return Ok(n)
+
+result = load_code("42")
+print(result.unwrap())

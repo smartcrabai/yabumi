@@ -1,0 +1,14 @@
+# Verifies: SPEC §3.5 (struct), §4 (variables and mutability) / D-MUT-01 a method's self
+# mutability -- `var self` / D-DIAG-02 E3001
+# A method that mutates a field requires `var self`. Unless the calling side's instance
+# is a var binding, a `var self` method cannot be called and this produces E3001.
+
+struct Counter
+    value: int
+
+    def increment(var self): void
+        self.value = self.value + 1
+
+c = Counter(value: 0)
+c.increment()
+print(c.value)

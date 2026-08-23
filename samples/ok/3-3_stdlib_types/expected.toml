@@ -1,0 +1,34 @@
+# SPEC §3.3: confirms that constructing Result/Option/Error/Value, match-decomposition,
+# every method, and the cause chain all work correctly.
+
+[[case]]
+id = "run_main_ok"
+entry = "entry_main.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Verifies via assert the construction and match-decomposition of Ok/Err/Some/None, and the construction of each Value variant (Null/Bool/Int/Float/Str/List/Dict) plus basic calls to helpers like as_int."
+
+[[case]]
+id = "run_full_method_coverage_and_cause_chain_ok"
+entry = "entry_full_method_coverage_and_cause_chain.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Calls each of Result's 9 methods (is_ok/is_err/ok/err/unwrap_or/unwrap_or_else/map/map_err/and_then) and Option's 8 methods (is_some/is_none/unwrap_or/unwrap_or_else/map/and_then/filter/ok_or) once, and asserts the kind/message at each level of an Error.cause chain nested 4 levels deep (3 hops) via match decomposition."

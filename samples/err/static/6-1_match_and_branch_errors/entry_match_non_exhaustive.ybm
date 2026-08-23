@@ -1,0 +1,19 @@
+#!/usr/bin/env ybm
+# Verifies: SPEC §6.1 (an enum match has an exhaustiveness check)
+# Decisions: DECISIONS D-DIAG-02 (E1021 = match exhaustiveness violation, a missing enum arm)
+#
+# enum Shape has 3 variants, Circle/Rect/Triangle, but the match omits Triangle and
+# places no wildcard either. Verifies that this reports an exhaustiveness violation (E1021).
+
+enum Shape
+    Circle(radius: float)
+    Rect(w: float, h: float)
+    Triangle(base: float, height: float)
+
+def area(shape: Shape): float
+    return match shape
+        Circle(r) => 3.14 * r * r
+        Rect(w, h) => w * h
+
+result = area(Circle(2.0))
+print(result)

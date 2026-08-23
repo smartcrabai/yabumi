@@ -1,0 +1,7 @@
+# Verifies: SPEC §7.4 (no panics) / DECISIONS D-ERR-04 item 4 (out-of-range conversion of int(x: float))
+# When int(x: float) produces a result exceeding the range of i64 (max approx. 9.22e18), it
+# panics (E6003) and terminates immediately. There is no dedicated safe version; the convention
+# is to check the range beforehand (STDLIB.md §1.1, §14).
+
+big = 1.0e300
+converted = int(big)

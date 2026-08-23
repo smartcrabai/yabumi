@@ -1,0 +1,33 @@
+# Verifies SPEC 8's effect system (uses declarations, summing, implicit propagation to higher-order functions, transitive propagation).
+
+[[case]]
+id = "run_single_and_summed_and_hof"
+entry = "entry_main.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "effects ok\n" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Asserts single-effect-declaring functions with uses {fs}/uses {net}, effect summing in probe which calls them, and implicit propagation of an effectful lambda via apply."
+
+[[case]]
+id = "run_transitive_and_hof"
+entry = "entry_transitive_and_hof_effects.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "transitive effects ok\n" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Asserts A->B->C's 3-level transitive propagation (D-FUNC-03), and the union requirement for a higher-order function taking 2 function-typed arguments with different effects."

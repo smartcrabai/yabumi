@@ -1,0 +1,79 @@
+[[case]]
+id = "check_reassign_immutable"
+entry = "entry_reassign_immutable.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E3001"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Reassigning the immutable binding x, declared without `var`, produces E3001."
+
+[[case]]
+id = "check_field_write_immutable"
+entry = "entry_field_write_immutable.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E3001"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Rewriting a field via `p.x = 3` on struct variable p, which is not a var binding, produces E3001."
+
+[[case]]
+id = "check_var_self_required"
+entry = "entry_var_self_required.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E3001"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Calling the `var self` method via `c.increment()` on instance c, which is not a var binding, produces E3001 (D-MUT-01)."
+
+[[case]]
+id = "check_nested_root_not_var"
+entry = "entry_nested_root_not_var.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E3001"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "The root variable u of the nested destructive method call `u.tags.push(\"b\")` is not a var binding, producing E3001 (D-MUT-03)."
+
+[[case]]
+id = "check_subscript_write_immutable"
+entry = "entry_subscript_write_immutable.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E3001"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "The subscript assignment `xs[0] = 99` on list variable xs, which is not a var binding, produces E3001 (D-COL-02)."

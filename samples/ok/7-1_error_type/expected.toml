@@ -1,0 +1,15 @@
+[[case]]
+id = "run_ok"
+entry = "entry_main.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Asserts construction requiring explicit cause: None, a 3-level chain construction via cause: Some(inner), and direct access to the .kind/.message/.cause fields (D-STDPOL-05)."

@@ -1,0 +1,70 @@
+# Verifies: SPEC §6.2/§12, DECISIONS D-SYN-05
+# In the input source, the indent of a parenthesis-free `.`/`|>`-led line continuation
+# is syntactically free (D-SYN-05) as long as its difference from the base line (the
+# statement's first line) is a multiple of 4, but fmt always normalizes it to base line
+# + 4. sample.in.ybm gives each continuation line a different non-canonical indent --
+# base line +12/+8/+16, +8/+20, etc. -- and confirms that sample.out.ybm unifies them all to base line + 4.
+
+[[case]]
+id = "check_normalizes_chain_indent"
+entry = "sample.in.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = "sample.out.ybm"
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "ybm check sample.in.ybm. Type-checking and the effect check succeed, and the content after in-place fmt byte-matches sample.out.ybm (D-SYN-05's base-line + 4 normalization). Since check never executes, stdout/stderr are empty."
+
+[[case]]
+id = "check_diff_detects_nonnormalized_indent"
+entry = "sample.in.ybm"
+cmd = "check_diff"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = []
+fmt_diff_expected = true
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "ybm check sample.in.ybm --check. Since the continuation-line indent isn't normalized to base line + 4, there is a diff (fmt_diff_expected=true), and it exits 1 with no rewrite. Per D-CLI-01 the diff display goes to stdout, but since its exact display format is unspecified by SPEC/DECISIONS, stdout here is mode=contains value=\"\" (not asserting the content, always true)."
+
+[[case]]
+id = "check_diff_on_normalized_form_has_no_diff"
+entry = "sample.out.ybm"
+cmd = "check_diff"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "sample.out.ybm is already canonical, so --check reports no diff and exits 0 (confirms fmt(fmt(x)) = fmt(x))."
+
+[[case]]
+id = "check_on_normalized_form_is_noop"
+entry = "sample.out.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = "sample.out.ybm"
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Running check's in-place rewrite on sample.out.ybm also byte-matches sample.out.ybm itself (idempotency)."

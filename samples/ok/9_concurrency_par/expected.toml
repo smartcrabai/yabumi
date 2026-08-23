@@ -1,0 +1,49 @@
+# Verifies SPEC 9's concurrent-execution syntax (par fixed-arity / par_map, par_each dynamic; input-order guarantee; no fail-fast).
+
+[[case]]
+id = "run_fixed_arity"
+entry = "entry_par_fixed_arity.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "par fixed arity ok\n" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Asserts the input-order guarantee (D-PAR-01) of par [f(), g(), ...] (list[T]) and par (f(), g()) (tuple)."
+
+[[case]]
+id = "run_par_map_and_each"
+entry = "entry_par_map_and_each.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "par map and each ok\n" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Asserts that par_map runs every element to completion, even with some Err, returning aligned as list[Result[T,E]] (no fail-fast), and that par_each is dedicated to side effects and returns void."
+
+[[case]]
+id = "run_par_nested"
+entry = "entry_par_nested.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "par nested ok\n" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Asserts nesting a par call inside par (D-PAR-02, permitted without restriction)."

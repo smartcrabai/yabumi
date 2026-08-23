@@ -1,0 +1,47 @@
+[[case]]
+id = "check_indentation_mismatch"
+entry = "entry_indentation_mismatch.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E0501"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "The def body is indented by +2, and per D-SYN-01's rule (\"anything other than same/+4/-4 is a syntax error\"), this produces E0501."
+
+[[case]]
+id = "check_elif_not_supported"
+entry = "entry_elif_not_supported.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E0502"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Per D-SYN-03, no `elif`-equivalent syntax exists. The bare identifier `elif` is immediately followed by the token `x`, producing the unexpected-token error E0502."
+
+[[case]]
+id = "check_pipe_missing_placeholder"
+entry = "entry_pipe_missing_placeholder.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E0503"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "The pipe target with arguments, `fs.write(\"out.json\")`, has no `_` placeholder, violating the required rule in SPEC §6.3 and producing E0503."

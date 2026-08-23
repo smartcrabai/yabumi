@@ -1,0 +1,33 @@
+#!/usr/bin/env ybm
+
+# Verifies SPEC 9's par_map / par_each for dynamic collections.
+# - xs.par_map: even given a pure function that returns Err for some elements, every
+# element runs to completion with no fail-fast, returning as list[Result[T, E]] aligned
+# in input order (D-PAR-01)
+# - xs.par_each: has only side effects and returns void. Since par branches copy values
+# and share no mutable state (SPEC 9), side effects are observed by writing to a
+# dedicated file per element (_out/marker_<n>.txt), then confirmed after completion via
+# xs.each (a sequential check where order carries no meaning).
+
+def classify(x: int): Result[int, Error]
+    if x % 2 == 0
+        return Ok(x)
+    else
+        return Err(Error(kind: "odd", message: f"{x} is odd", cause: None))
+
+def write_marker(x: int): void uses {fs}
+    fs.write(f"_out/marker_{x}.txt", str(x))
+
+xs = [1, 2, 3, 4, 5]
+
+classified = xs.par_map((x) => classify(x))
+assert(classified.count() == 5)
+ok_flags = classified.map((r) => r.is_ok())
+assert(ok_flags == [false, true, false, true, false])
+assert(classified.get(1).unwrap().unwrap() == 2)
+assert(classified.get(3).unwrap().unwrap() == 4)
+
+xs.par_each((x) => write_marker(x))
+xs.each((x) => assert(fs.read(f"_out/marker_{x}.txt").unwrap_or("") == str(x)))
+
+print("par map and each ok")

@@ -1,0 +1,7 @@
+# Verifies: SPEC §7.4 (no panics) / DECISIONS D-ERR-04 item 2
+# Accessing a dict via m[k] with a key that does not exist panics (E6001) and terminates immediately.
+# The safe version is m.get(k): Option[V] (STDLIB.md §2.2, §14).
+
+m = {"a": 1}
+missing_key = "z"
+missing_value = m[missing_key]

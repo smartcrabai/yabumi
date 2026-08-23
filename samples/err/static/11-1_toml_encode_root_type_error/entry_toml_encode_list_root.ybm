@@ -1,0 +1,10 @@
+#!/usr/bin/env ybm
+# Regression for SPEC §15: a list[Repo] may be encoded directly as a root value.
+
+struct Repo
+    name: str
+    stars: int
+
+repos = [Repo(name: "yabumi", stars: 42), Repo(name: "ybm-lib", stars: 7)]
+encoded = repos |> toml.encode
+print(encoded)

@@ -1,0 +1,34 @@
+# err/static/6-1_non_enum_match_missing_wildcard
+# Verifies: SPEC §6.1. A missing wildcard on a non-enum-scrutinee match (D-TYPE-18).
+
+[[case]]
+id = "int_match_missing_wildcard"
+entry = "entry_int_match_missing_wildcard.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1021"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E1021]" }
+doc_blocks = []
+requires_env = []
+notes = "A match on an int scrutinee has no `_` arm, an exhaustiveness violation (D-TYPE-18)"
+
+[[case]]
+id = "str_match_missing_wildcard"
+entry = "entry_str_match_missing_wildcard.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1021"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E1021]" }
+doc_blocks = []
+requires_env = []
+notes = "A match on a str scrutinee has no `_` arm, an exhaustiveness violation (D-TYPE-18)"

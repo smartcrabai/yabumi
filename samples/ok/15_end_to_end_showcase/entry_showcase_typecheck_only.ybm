@@ -1,0 +1,26 @@
+#!/usr/bin/env ybm
+
+# An adaptation of the SPEC §15 sample body (the full version, including a call to
+# fetch_repos which uses a real http.get).
+# Since this depends on the network, only this file's type/effect check (`ybm check`)
+# is the verification target; it is never run (`ybm`) (SAMPLES_PLAN.md §2 pattern 3).
+# D-STDPOL-09: toml.encode allows only a T whose top level is a table (dict[str, V] or
+# struct), so top (list[Repo]) is first wrapped in a dict, {"repos": top}, before being
+# encoded (an adaptation of SPEC §15's `top |> toml.encode`, aligned with D-STDPOL-09).
+# The write destination matches SAMPLES_PLAN.md section 1.4's _out/ sandbox convention
+# (since only check, not execution, is this file's verification target, nothing is actually written).
+
+users = ["alice", "bob", "carol"]
+results = users.par_map((u) => fetch_repos(u))
+
+top = results
+    .filter((r) => r.is_ok())
+    .flat_map((r) => r.unwrap_or([]))
+    .filter((repo) => repo.stars > 100)
+    .sort_by((repo) => repo.stars)
+    .rev()
+    .take(10)
+
+report: dict[str, list[Repo]] = {"repos": top}
+report |> toml.encode |> fs.write("_out/top.toml", _)
+print(f"done: {top.count()} repos")

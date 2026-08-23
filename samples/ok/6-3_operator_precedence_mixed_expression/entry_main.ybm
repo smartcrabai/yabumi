@@ -1,0 +1,48 @@
+#!/usr/bin/env ybm
+
+# SPEC §6.3 (pipe) / §7.2 (`?` operator) verification: empirically measures DECISIONS D-OP-01's precedence table across several mixed expressions.
+# Asserts that the following binding order holds even without parentheses:
+# arithmetic (* /) > arithmetic (+ -) > comparison (< <= > >=) > equality (==) > logical and (and) > pipe (|>, weakest)
+# Postfix `?`/`.`/`()`/`[]` are at the same level, applied sequentially left to right (D-OP-02)
+# Unary `not` binds tighter than comparison/`and` (D-OP-01's risk:high ruling)
+
+# Arithmetic precedence: `*` binds tighter than `+`
+assert(1 + 2 * 3 == 7, "* binds tighter than +: 1 + (2*3) == 7, not (1+2)*3 == 9")
+
+# Comparison + logical and: since chained comparison (a < b < c) cannot be written, use the form `a < b and b < c` (D-OP-01)
+a = 1
+b = 2
+c = 3
+assert(a < b and b < c, "chained comparison must be written as `a < b and b < c`, not `a < b < c`")
+
+# Pipe has the weakest precedence (D-OP-01): `+` evaluates first, and then `|>` is applied
+def triple(x: int): int
+    return x * 3
+
+piped = 2 + 3 |> triple
+assert(piped == 15, "pipe (priority 9, weakest) binds after +: (2+3) |> triple == triple(5) == 15")
+
+# Postfix `?` and `.` are left-associative and applied sequentially (D-OP-02): `f(x)?.field` is the same as `(f(x)?).field`
+struct Box
+    value: int
+
+def make_box(n: int): Result[Box, Error]
+    if n > 0
+        return Ok(Box(value: n))
+    else
+        return Err(Error(kind: "decode", message: "non-positive", cause: None))
+
+boxed_value = make_box(5)?.value
+assert(boxed_value == 5, "postfix ? and . chain left-to-right: make_box(5)?.value == (make_box(5)?).value")
+
+# `not` binds tighter than comparison (and `and`) (D-OP-01).
+# Showing the boundary via a bool-to-bool `==` comparison doesn't work as a test,
+# because "not(a) == b" is always equivalent to "a != b" regardless of binding
+# order, giving the same boolean either way (so a bool-to-bool comparison is avoided).
+# Instead, mixes not, comparison (>), and logical and (and) into one expression, choosing values whose result changes depending on the binding order.
+flag = true
+cnt = 1
+combined = not flag and cnt > 3
+# Correct binding (D-OP-01): (not flag) and (cnt > 3) = (not true) and (1 > 3) = false and false = false
+# Incorrect binding (if not were weaker than and): not (flag and (cnt > 3)) = not (true and false) = not false = true
+assert(not combined, "not binds tighter than both `>` and `and`: (not flag) and (cnt > 3) must be false here")

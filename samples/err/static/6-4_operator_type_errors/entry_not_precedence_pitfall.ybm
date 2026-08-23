@@ -1,0 +1,12 @@
+#!/usr/bin/env ybm
+# Verifies: SPEC §6.3 (operator precedence, derived backward from the constraint that pipe has the lowest precedence and is left-associative)
+# Decisions: DECISIONS D-OP-01 (risk: high, the precedence table)
+#
+# Unary `not` binds tighter than comparison operators, so `not x > 3` parses as
+# `(not x) > 3`. Since `not x`'s type is bool, and D-OP-05's ordering comparison is
+# defined only for int/float/str, this becomes a bool > int comparison; verifies that
+# this reports E1051 (using a type that cannot be ordering-compared).
+
+x = 5
+result = not x > 3
+print(result)

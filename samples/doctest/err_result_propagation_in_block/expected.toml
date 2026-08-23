@@ -1,0 +1,19 @@
+# Verifies: SPEC §13, §7.2 / D-DOC-05
+
+[[case]]
+id = "test_toplevel_question_err_propagation_fails_block"
+entry = "entry_main.ybm"
+cmd = "test"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "E6005" }
+doc_blocks = [
+    { line = 10, result = "fail", code = "E6005" },
+]
+requires_env = []
+notes = "\"abc\".parse_int() returns an Err from a decode failure. The block's top-level `n = parse_wrapped(\"abc\")?` propagates that Err, aborting the block before assert is reached (E6005, the doc-test-block equivalent of SPEC §7.2 \"top-level `?`: on Err, print to stderr and exit 1\"). Per D-DOC-05, the fail's report line is line 10, where the Err actually propagated."

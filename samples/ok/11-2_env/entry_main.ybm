@@ -1,0 +1,26 @@
+#!/usr/bin/env ybm
+
+# SPEC 11.2 env verification: get/set/args/stdin
+# STDLIB.md §7 env -- effect: env.
+# - Confirms env.get(an unset key) is None, and after env.set the same key becomes Some.
+# - env.args() matches the CLI arguments fixed to args = ["foo", "bar"] in expected.toml.
+# - env.stdin() reads stdin_fixture.txt (given via expected.toml's stdin_file) through EOF.
+# No uses declaration is needed for a top-level statement (SPEC §8: "top-level implicitly allows every effect").
+
+key = "YABUMI_SAMPLE_UNSET_KEY"
+
+before = env.get(key)
+assert(before.is_none(), "env.get on a key that was never set should be None")
+
+env.set(key, "sample-value")
+after = env.get(key)
+assert(after.is_some(), "env.get after env.set on the same key should be Some")
+assert(after.unwrap() == "sample-value", "env.get should return exactly the value passed to env.set")
+
+args = env.args()
+assert(args == ["foo", "bar"], "env.args() should return the fixed CLI arguments from expected.toml")
+
+input = env.stdin()?
+assert(input == "line one\nline two\n", "env.stdin() should read stdin_fixture.txt through EOF")
+
+print("env sample done")

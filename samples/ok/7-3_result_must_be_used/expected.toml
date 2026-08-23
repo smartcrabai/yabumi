@@ -1,0 +1,15 @@
+[[case]]
+id = "run_ok"
+entry = "entry_main.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Asserts each context of using a Result as an assignment right-hand side, a return target, a function-call argument, a collection element, and an operator (==) operand (D-ERR-03 rule 2), plus the explicit discard `_ = f()` (rule 1)."

@@ -1,0 +1,22 @@
+# Verifies: SPEC §13 / D-DOC-03
+
+[[case]]
+id = "test_all_declaration_kinds_pass"
+entry = "entry_main.ybm"
+cmd = "test"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = [
+    { line = 8, result = "pass" },
+    { line = 15, result = "pass" },
+    { line = 23, result = "pass" },
+    { line = 33, result = "pass" },
+]
+requires_env = []
+notes = "Confirms that the `##` doc comment placed immediately before each of the 4 kinds of declaration -- the module-level constant pi_approx, def add, struct Point, and enum Shape -- is extracted and run as a doc test target, and that all of them pass (D-DOC-03)."

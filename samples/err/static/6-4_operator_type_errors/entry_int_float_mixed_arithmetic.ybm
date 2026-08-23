@@ -1,0 +1,10 @@
+#!/usr/bin/env ybm
+# Verifies: SPEC §6.3/§6.4 (operator type constraints)
+# Decisions: DECISIONS D-OP-03 (no implicit conversion between int/float whatsoever; mixed arithmetic is E1050)
+#
+# Adds int (a) and float (b) directly with `+`, with no implicit conversion, and verifies this reports E1050.
+
+a = 3
+b = 2.5
+c = a + b
+print(c)

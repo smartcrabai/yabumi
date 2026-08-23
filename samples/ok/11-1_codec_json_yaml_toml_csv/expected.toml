@@ -1,0 +1,49 @@
+# Verifies SPEC 11.1's codecs (json/yaml/toml/csv).
+
+[[case]]
+id = "run_json_yaml_toml"
+entry = "entry_json_yaml_toml.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "json/yaml/toml decode+encode ok\n" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Asserts assignment-target-annotation-driven decode (json/yaml/toml), encode, and dynamic decode via T=Value."
+
+[[case]]
+id = "run_csv"
+entry = "entry_csv.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "csv decode+encode ok\n" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Asserts csv.decode[T]'s required explicit [T], header-name matching, csv.encode, and dynamic decode via Value with csv.decode_rows."
+
+[[case]]
+id = "run_roundtrip_all"
+entry = "entry_roundtrip_all_codecs_and_value.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "all codec round-trips ok\n" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Asserts round-trip equality of encode then decode for each of json/yaml/toml/csv, and round-trip equality for dynamic decode via Value. toml uses only a struct root, per D-STDPOL-09."

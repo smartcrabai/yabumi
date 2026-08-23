@@ -1,0 +1,10 @@
+# Verifies E1020, produced by DECISIONS D-TYPE-17's priority 3 (returning a type that
+# matches neither the annotation nor T).
+# Confirms it becomes a type error by returning a str inside a function with the
+# return-type annotation Result[int, Error] -- the only deliberately failing case in this directory (exit_code=1, diagnostics=["E1020"]).
+
+def broken(n: int): Result[int, Error]
+    return "not an int or Result"
+
+x = broken(1)
+assert(x.is_ok())

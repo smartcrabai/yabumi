@@ -1,0 +1,18 @@
+# Verifies: SPEC §12, DECISIONS D-LINT-02 (E4002 unused top-level function)
+# Follows the schema in SAMPLES_PLAN.md §1.3.
+
+[[case]]
+id = "check_reports_unused_function"
+entry = "entry_with_dead_function.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E4002"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E4002]" }
+doc_blocks = []
+requires_env = []
+notes = "Only dead_function is unused and reports E4002 once. live_function is exempt because it's called from the trailing print. Box.unused_method is a struct method and out of scope per D-LINT-02, so E4002 never fires for it even though it's unused (this contrast is the main point of this directory)."

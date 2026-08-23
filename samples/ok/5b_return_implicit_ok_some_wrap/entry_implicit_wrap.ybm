@@ -1,0 +1,18 @@
+# Verifies DECISIONS D-TYPE-17's priorities 1 and 2 (implicitly wrapping a return
+# expression as Ok/Some).
+# Inside a function with the return-type annotation Option[float], asserts both a
+# branch that returns an explicit None (priority 1: matches the annotation itself), and
+# a branch that returns a bare float expression (1.0 / float(n)) (priority 2: implicitly wrapped as Some(...)).
+# A case of the same form as SPEC §5's `return http.get(url)?.body` (an example of returning T as-is).
+
+def safe_reciprocal(n: int): Option[float]
+    if n == 0
+        return None
+    else
+        return 1.0 / float(n)
+
+zero_case = safe_reciprocal(0)
+assert(zero_case.is_none())
+
+normal_case = safe_reciprocal(4)
+assert(normal_case.unwrap() == 0.25)

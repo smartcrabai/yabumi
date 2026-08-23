@@ -1,0 +1,7 @@
+# Verifies: SPEC §7.4 (no panics) / DECISIONS D-ERR-04 item 4 (arithmetic overflow, + - * unary -)
+# Adding 1 to the maximum i64 value (9223372036854775807) overflows out of range and
+# panics (E6003), terminating immediately. The safe version is math.checked_add(a, b): Option[int]
+# (STDLIB.md §12, §14).
+
+max_i64 = 9223372036854775807
+overflowed = max_i64 + 1

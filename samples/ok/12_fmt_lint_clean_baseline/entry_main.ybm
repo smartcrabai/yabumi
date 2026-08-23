@@ -1,0 +1,37 @@
+#!/usr/bin/env ybm
+
+# SPEC 12 fmt/lint verification: source already formatted following every D-FMT-01
+# through 06 rule, and a positive-control sample confirming it contains none of unused
+# variable (E4001), unused function (E4002), shadowing (E4003), unreachable code
+# (E4004), or a naming-convention violation (E4005).
+# Verifies that both `ybm check` and `ybm check <file> --check` (D-CLI-02) report no
+# diff, no diagnostics, and exit 0: here, the state itself of "needing no formatting
+# whatsoever" is shown as the positive control.
+
+struct Point
+    x: int
+    y: int
+
+    def manhattan_distance(self, other: Point): int
+        dx = math.abs_int(self.x - other.x)
+        dy = math.abs_int(self.y - other.y)
+        return dx + dy
+
+def clamp(value: int, lo: int, hi: int): int
+    if value < lo
+        return lo
+    else
+        if value > hi
+            return hi
+        else
+            return value
+
+origin = Point(x: 0, y: 0)
+target = Point(x: 3, y: 4)
+distance = origin.manhattan_distance(target)
+assert(distance == 7)
+
+clamped = clamp(15, 0, 10)
+assert(clamped == 10)
+
+print("fmt lint baseline ok")

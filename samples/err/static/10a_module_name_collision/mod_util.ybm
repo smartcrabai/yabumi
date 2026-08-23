@@ -1,0 +1,10 @@
+module
+
+# Verifies: SPEC §10 name collision, DECISIONS.md D-MOD-05 (name-collision diagnostic format)
+# Declares format_greeting, the same name as entry_main.ybm. Being a declaration under
+# a module directive, this alone doesn't violate §10's "a module holds only
+# declarations" rule, but it collides with entry_main.ybm's definition in the single
+# flat namespace, producing E1001.
+
+def format_greeting(name: str): str
+    return f"hi, {name}"

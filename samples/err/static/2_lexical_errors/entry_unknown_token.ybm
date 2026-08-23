@@ -1,0 +1,4 @@
+# Verifies: SPEC §2 (lexical) / D-DIAG-02 E0005
+# The symbol character `@`, which doesn't exist in the language, produces E0005 (undefined character/token).
+
+x = 1 @ 2

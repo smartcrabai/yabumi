@@ -1,0 +1,9 @@
+# Verifies: SPEC §7.4 (no panics) / DECISIONS D-ERR-04 item 7
+# Unbounded recursion with no termination condition exhausts the native stack and
+# panics (E6008, stack overflow), terminating immediately. There is no safe version;
+# the convention is to replace the recursion with iteration such as fold (STDLIB.md §14).
+
+def recurse(n: int): int
+    return recurse(n + 1)
+
+result = recurse(0)

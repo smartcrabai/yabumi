@@ -1,0 +1,9 @@
+# Verifies: SPEC §12 (lint), DECISIONS D-LINT-04 (unreachable code E4004)
+# Inside compute()'s body, in the same block, print(n) immediately follows a return
+# statement, so verifies E4004 is reported once (v1 only targets "the statement immediately after a return").
+
+def compute(n: int): int
+    return n + 1
+    print(n)
+
+print(compute(5))

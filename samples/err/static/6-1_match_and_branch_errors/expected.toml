@@ -1,0 +1,50 @@
+# err/static/6-1_match_and_branch_errors
+# Verifies: SPEC §6.1. Branch unification failure, exhaustiveness violation, block-value rule violation (D-SYN-11).
+
+[[case]]
+id = "if_branch_type_mismatch"
+entry = "entry_if_branch_type_mismatch.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1020"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E1020]" }
+doc_blocks = []
+requires_env = []
+notes = "The if branch (int) and else branch (str) cannot unify, producing a type error (SPEC §6.1)"
+
+[[case]]
+id = "match_non_exhaustive"
+entry = "entry_match_non_exhaustive.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1021"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E1021]" }
+doc_blocks = []
+requires_env = []
+notes = "A match missing one of enum Shape's variants (Triangle) is an exhaustiveness violation (SPEC §6.1)"
+
+[[case]]
+id = "block_tail_non_expression"
+entry = "entry_block_tail_non_expression.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1020"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E1020]" }
+doc_blocks = []
+requires_env = []
+notes = "The multi-statement match arm (Stop) ends with a var declaration (a statement with no value), so the block's value is undetermined (D-SYN-11)"

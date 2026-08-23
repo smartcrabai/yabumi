@@ -1,0 +1,19 @@
+# Verifies: SPEC §12 (lint), DECISIONS D-LINT-02 (unused top-level function E4002)
+# dead_function is never called from either a top-level executable statement or a doc test, so it is an E4002 target.
+# As a contrast, Box.unused_method (a struct method) is included. struct methods are
+# explicitly out of scope for D-LINT-02, so this one is never warned about even though unused.
+
+struct Box
+    value: int
+
+    def unused_method(self): int
+        return self.value
+
+def dead_function(x: int): int
+    return x + 1
+
+def live_function(x: int): int
+    return x * 2
+
+b = Box(value: 1)
+print(live_function(b.value))

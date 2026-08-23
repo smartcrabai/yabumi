@@ -1,0 +1,35 @@
+# Follows the schema in SAMPLES_PLAN.md section 1.3.
+# SPEC 12 fmt/lint verification: verifies that an already-formatted, lint-clean file
+# makes both check and check --check exit 0 (no diagnostics, no fmt diff).
+
+[[case]]
+id = "check_no_diagnostics"
+entry = "entry_main.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = "entry_main.ybm"
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "ybm check performs type-checking + fmt (in-place) + lint, but since the source is already canonical and lint-clean, it byte-matches entry_main.ybm itself even after the in-place rewrite, with zero diagnostics, and exits 0."
+
+[[case]]
+id = "check_diff_no_diff"
+entry = "entry_main.ybm"
+cmd = "check_diff"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "ybm check entry_main.ybm --check does not rewrite via fmt, only detecting a diff. Since the source is already canonical, fmt_diff_expected=false and it exits 0."

@@ -1,0 +1,18 @@
+# Verifies: SPEC §12, DECISIONS D-LINT-04 (E4004 unreachable code)
+# Follows the schema in SAMPLES_PLAN.md §1.3.
+
+[[case]]
+id = "check_reports_unreachable_after_return"
+entry = "entry_code_after_return.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E4004"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E4004]" }
+doc_blocks = []
+requires_env = []
+notes = "print(n) immediately following return n + 1 inside compute() is unreachable code in the same block and reports E4004 once. n is already used in the return statement, so E4001 does not fire. compute is called from the trailing print, so E4002 does not fire either."

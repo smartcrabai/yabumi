@@ -1,0 +1,47 @@
+#!/usr/bin/env ybm
+
+# SPEC 14 memory model verification.
+# - D-MUT-04: a struct/list passed as a function argument is always a value copy; even
+# if the function receives it as a local var variable and calls a destructive method on
+# it, this never propagates to the caller's variable at all.
+# - D-MUT-01/02: calling a `var self` method (where the receiver is a var-bound
+# variable) is the sole exception to value semantics, and directly rewrites the caller's variable.
+# - D-MUT-04: a lambda's capture is likewise always a value copy; even if the captured
+# variable is var, the result of calling a destructive method inside the lambda to
+# rewrite it never propagates to the variable in the outer scope.
+
+struct Counter
+    value: int
+
+    def increment(var self): void
+        self.value = self.value + 1
+
+def try_mutate_counter(c: Counter): void
+    var local = c
+    local.increment()
+
+def try_mutate_list(xs: list[int]): void
+    var local = xs
+    local.push(999)
+
+# --- A function argument is a value copy: a change inside the function never propagates to the caller ---
+var counter = Counter(value: 1)
+try_mutate_counter(counter)
+assert(counter.value == 1, "passing a struct as a function argument copies it; the callee's local mutation must not propagate back")
+
+var numbers = [1, 2, 3]
+try_mutate_list(numbers)
+assert(numbers == [1, 2, 3], "passing a list as a function argument copies it; the callee's local mutation must not propagate back")
+
+# --- Only a `var self` method call is the sole mutation-propagation path ---
+var counter2 = Counter(value: 5)
+counter2.increment()
+assert(counter2.value == 6, "calling a `var self` method directly on a var-bound variable is the only path that mutates the caller's variable in place")
+
+# --- A lambda's capture is always a value copy: a rewrite inside the lambda never propagates outward ---
+var captured_list = [1, 2, 3]
+mutate_captured = () => captured_list.push(999)
+mutate_captured()
+assert(captured_list == [1, 2, 3], "capturing a var list in a lambda copies it by value; mutating the captured copy inside the lambda must not affect the outer variable")
+
+print("memory model value semantics ok")

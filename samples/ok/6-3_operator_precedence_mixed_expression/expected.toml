@@ -1,0 +1,15 @@
+[[case]]
+id = "run_ok"
+entry = "entry_main.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Empirically measures D-OP-01's precedence table in one file: arithmetic (*/+), comparison + logical and (the chained-comparison-avoidance form), pipe's weakest precedence, mixed left-associative postfix ?/., and the boundary where not binds tighter than comparison/and (explaining in a comment why a bool-to-bool comparison can't verify it, and instead mixing not/>/and to choose values whose result changes with binding order)."

@@ -1,0 +1,32 @@
+# SPEC §3.2: verifies constructing list/dict/set/tuple literals, empty collections, and a single-element tuple
+# Referenced decisions: D-TYPE-01 (a single-element tuple requires a trailing comma) / D-TYPE-03 (an empty `{}` is always dict; an empty set cannot be a literal)
+# D-TYPE-15/16 (an empty collection is inferred from an annotation or the expected type of a call argument)
+
+xs_lit: list[int] = [1, 2, 3]
+assert(xs_lit.len() == 3)
+assert(xs_lit[0] == 1)
+assert(xs_lit[2] == 3)
+
+d: dict[str, int] = {"a": 1}
+assert(d.get("a").unwrap() == 1)
+
+s: set[int] = {1, 2}
+assert(s.contains(1))
+assert(s.contains(2))
+assert(s.len() == 2)
+
+t = (1, "a")
+assert(t.0 == 1)
+assert(t.1 == "a")
+
+single: tuple[int] = (5,)
+assert(single.0 == 5)
+
+empty_list: list[int] = []
+assert(empty_list.is_empty())
+
+empty_set: set[int] = set[int]()
+assert(empty_set.is_empty())
+
+empty_dict: dict[str, int] = {}
+assert(empty_dict.is_empty())

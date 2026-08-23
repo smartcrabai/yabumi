@@ -1,0 +1,24 @@
+# Verifies SPEC.md §5.1's lambdas (parentheses required, single expression only) and
+# DECISIONS D-SYN-10 (a multi-line if/match also counts as the lambda body's single expression).
+
+xs = [1, 2, 3, 4, 5]
+
+doubled = xs.map((x) => x * 2)
+assert(doubled == [2, 4, 6, 8, 10])
+
+big = xs.filter((x: int) => x > 3)
+assert(big == [4, 5])
+
+labels = xs.map((x) =>
+    if x % 2 == 0
+        "even"
+    else
+        "odd")
+assert(labels == ["odd", "even", "odd", "even", "odd"])
+
+categorized = xs.map((x) =>
+    match x
+        1 => "one"
+        2 => "two"
+        _ => "many")
+assert(categorized == ["one", "two", "many", "many", "many"])

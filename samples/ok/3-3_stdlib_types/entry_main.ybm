@@ -1,0 +1,48 @@
+# SPEC §3.3: verifies constructing Result/Option (Ok/Err/Some/None) and their
+# match-decomposition, and constructing each Value variant plus basic calls to helpers like as_int
+# Referenced decisions: D-TYPE-09 (Result/Option are ordinary enums; Ok/Err/Some/None
+# are constructed with positional arguments)
+# D-TYPE-10 (Value's structure) / D-SYN-07 (an enum variant is always constructed/decomposed with positional arguments)
+
+def describe_result(r: Result[int, str]): str
+    return match r
+        Ok(v) => f"ok:{v}"
+        Err(e) => f"err:{e}"
+
+ok_val: Result[int, str] = Ok(42)
+err_val: Result[int, str] = Err("boom")
+assert(describe_result(ok_val) == "ok:42")
+assert(describe_result(err_val) == "err:boom")
+
+def describe_option(o: Option[int]): str
+    return match o
+        Some(v) => f"some:{v}"
+        None => "none"
+
+some_val: Option[int] = Some(7)
+none_val: Option[int] = None
+assert(describe_option(some_val) == "some:7")
+assert(describe_option(none_val) == "none")
+
+# Constructing each Value variant and its helper methods (STDLIB.md §3.4)
+v_int: Value = Int(5)
+assert(v_int.as_int().unwrap() == 5)
+assert(not v_int.is_null())
+
+v_str: Value = Str("hi")
+assert(v_str.as_str().unwrap() == "hi")
+
+v_bool: Value = Bool(true)
+assert(v_bool.as_bool().unwrap() == true)
+
+v_float: Value = Float(2.5)
+assert(v_float.as_float().unwrap() == 2.5)
+
+v_null: Value = Null
+assert(v_null.is_null())
+
+v_list: Value = List([Int(1), Int(2)])
+assert(v_list.as_list().unwrap().len() == 2)
+
+v_dict: Value = Dict({"k": Int(9)})
+assert(v_dict.get("k").unwrap().as_int().unwrap() == 9)

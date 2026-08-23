@@ -1,0 +1,17 @@
+# Follows the schema in SAMPLES_PLAN.md §1.3. ok/5-1_lambdas: 1 case.
+
+[[case]]
+id = "lambda_forms"
+entry = "entry_main.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Passes a simple lambda, a type-annotated lambda, and a lambda whose single-expression body is a multi-line if/match (D-SYN-10) to map/filter, and asserts the results."

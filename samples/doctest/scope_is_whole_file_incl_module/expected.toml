@@ -1,0 +1,19 @@
+# Verifies: SPEC §13, §10 / D-MOD-04
+
+[[case]]
+id = "test_doc_block_calls_module_function"
+entry = "entry_main.ybm"
+cmd = "test"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = [
+    { line = 9, result = "pass" },
+]
+requires_env = []
+notes = "Even though entry_main.ybm itself does not declare double, a doc test block can call the double from the same-directory mod_helpers.ybm directly and pass (D-MOD-04: a doc test's scope is all declarations in the entry plus same-directory modules). Because mod_helpers.ybm carries a module directive, it is not treated as a test target passed to ybm on its own."

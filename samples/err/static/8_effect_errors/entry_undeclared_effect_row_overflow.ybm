@@ -1,0 +1,19 @@
+#!/usr/bin/env ybm
+# Verifies: SPEC §8 (higher-order functions: a function-typed argument's effects
+#       propagate implicitly; unless the caller's uses declaration is a superset, this
+#       is a type error for using an undeclared effect)
+# Decisions: DECISIONS D-FUNC-03 (takes the union of the effect sets of every function
+#       called / function-typed argument; unless it's a superset of the declared
+#       `uses`, this is E2002)
+#
+# fetch_all declares only `uses {fs}`, but the lambda passed to `urls.map` calls
+# `http.get`, which carries the effect `net`. The combined effect set becomes {fs,
+# net}, which is not a superset of the declared {fs}, so verifies that this reports E2002 (using an undeclared effect).
+
+def fetch_all(urls: list[str]): list[str] uses {fs}
+    bodies = urls.map((u) => http.get(u).unwrap().body)
+    fs.write("log.txt", "done")
+    return bodies
+
+result = fetch_all(["https://example.com"])
+print(result.len())

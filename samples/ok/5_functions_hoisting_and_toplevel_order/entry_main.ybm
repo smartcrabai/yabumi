@@ -1,0 +1,21 @@
+# Verifies SPEC.md §5 (no main function; top level runs top to bottom) and
+# DECISIONS D-SYN-08 (declaration hoisting).
+# Asserts that a function defined further down the file can be called from a top-level
+# statement above it (hoisting), and that multiple top-level assignment/print
+# statements run sequentially in the order written.
+
+a = double(3)
+assert(a == 6)
+
+print("first")
+print("second")
+
+b = triple(4)
+assert(b == 12)
+print("third")
+
+def double(n: int): int
+    return n * 2
+
+def triple(n: int): int
+    return n * 3

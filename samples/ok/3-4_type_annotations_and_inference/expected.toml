@@ -1,0 +1,18 @@
+# SPEC §3.4: confirms that function signatures' required annotations, local-variable
+# inference, and assignment-target-annotation-driven empty-collection inference across D-TYPE-16's 4 contexts all succeed.
+
+[[case]]
+id = "run_ok"
+entry = "entry_main.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Verifies via assert that an empty collection literal is inferred from the expected type in each of D-TYPE-16's 4 contexts (a variable declaration initializer, a return statement, a function-call argument position, a struct/enum constructor argument position)."

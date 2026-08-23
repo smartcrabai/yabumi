@@ -1,0 +1,15 @@
+#!/usr/bin/env ybm
+# Verifies: SPEC §6.1 (if/else is a value-returning expression)
+# Decisions: DECISIONS D-SYN-11 (if/match branches failing to unify is the same category as E1020)
+#
+# The if branch returns int (1) and the else branch returns str ("low"); since the two
+# branches' types cannot unify, verifies that `ybm check` reports E1020 (branch unification failure).
+
+def classify(score: int): int
+    return if score > 80
+        1
+    else
+        "low"
+
+result = classify(90)
+print(result)

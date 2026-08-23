@@ -1,0 +1,6 @@
+# Verifies: SPEC §4 (variables and mutability) / D-DIAG-02 E3001
+# Immutable by default. Reassigning a binding not declared with `var` is a type error.
+
+x = 5
+x = 6
+print(x)

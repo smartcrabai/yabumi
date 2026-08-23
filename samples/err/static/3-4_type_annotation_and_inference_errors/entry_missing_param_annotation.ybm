@@ -1,0 +1,8 @@
+# Verifies: SPEC §3.4 (scope of required type annotations) / D-TYPE-11 no default/variadic
+# parameters (a missing annotation is E1002) / D-DIAG-02 E1002
+# A function signature's parameters require a type annotation. Parameter x has none, producing E1002.
+
+def identity(x): int
+    return x
+
+print(identity(5))

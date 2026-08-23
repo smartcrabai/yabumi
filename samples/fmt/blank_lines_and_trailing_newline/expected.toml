@@ -1,0 +1,51 @@
+# Expected results for fmt/blank_lines_and_trailing_newline
+# Verifies: SPEC §2/§12, DECISIONS D-SYN-02 (consecutive blank lines are normalized to
+# at most 1, and the file's end is unified to exactly 1 trailing newline, no trailing blank lines)
+
+[[case]]
+id = "check_collapses_blank_lines_and_trailing_newlines"
+entry = "sample.in.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = "sample.out.ybm"
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Both a 2-line run and a 3-line run of consecutive blank lines are normalized to 1 line, and the 3 trailing blank lines at the file's end are removed so it ends with exactly 1 newline (D-SYN-02)."
+
+[[case]]
+id = "check_diff_detects_nonstandard_blank_lines"
+entry = "sample.in.ybm"
+cmd = "check_diff"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = []
+fmt_diff_expected = true
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "ybm check --check judges the non-canonical form as having a diff and exits 1 (D-CLI-02)."
+
+[[case]]
+id = "check_diff_idempotent_on_canonical_form"
+entry = "sample.out.ybm"
+cmd = "check_diff"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Against sample.out.ybm, already in canonical form (1 blank line, 1 trailing newline), there is no diff (fmt(fmt(x)) = fmt(x))."

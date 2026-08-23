@@ -1,0 +1,17 @@
+# Verifies SPEC 10's module-level constants (literals only) and cross-referencing between multiple modules.
+
+[[case]]
+id = "run_main"
+entry = "entry_main.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "hello from yabumi-sample\n" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Calls both mod_constants.ybm's literal constants and mod_helpers.ybm's functions that reference them from this entry, asserting D-MOD-02/03."

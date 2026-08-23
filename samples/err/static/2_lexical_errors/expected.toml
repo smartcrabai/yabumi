@@ -1,0 +1,111 @@
+[[case]]
+id = "check_tab_character"
+entry = "entry_tab_character.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E0001"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "A single tab character is mixed into the indentation; per D-SYN-01 this becomes E0001 immediately at the lexical layer."
+
+[[case]]
+id = "check_unterminated_string"
+entry = "entry_unterminated_string.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E0002"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "A string literal missing its closing `\"` produces E0002."
+
+[[case]]
+id = "check_invalid_escape"
+entry = "entry_invalid_escape.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E0003"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "An unknown escape `\\z`, not defined by D-LEX-06, produces E0003."
+
+[[case]]
+id = "check_invalid_int_literal"
+entry = "entry_invalid_int_literal.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E0004"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Violating D-LEX-03's `_` separator rule (no trailing or consecutive `_`) produces E0004."
+
+[[case]]
+id = "check_invalid_float_literal"
+entry = "entry_invalid_float_literal.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E0004"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "The digit D-LEX-04 requires around the decimal point is missing (`5.`), producing E0004."
+
+[[case]]
+id = "check_unknown_token"
+entry = "entry_unknown_token.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E0005"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "The symbol character `@`, which doesn't exist in the language, produces E0005 (undefined character/token)."
+
+[[case]]
+id = "check_non_ascii_identifier"
+entry = "entry_non_ascii_identifier.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E0005"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "D-LEX-02 restricts identifiers to ASCII only (UTF-8 is permitted only in comments and string literals). A non-ASCII character (an accented Latin letter, in `être`) used as an identifier outside a comment or string matches no lexical rule, producing E0005."

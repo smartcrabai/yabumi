@@ -1,0 +1,15 @@
+#!/usr/bin/env ybm
+# Verifies: SPEC §6.3 (pipe `|>`), §7.3 (ignoring a Result is forbidden)
+# Decisions: DECISIONS D-ERR-03 rule 3 (if the whole pipe's final result is a Result
+#       that is discarded as an expression statement, with no trailing `?` either, this
+#       is E1040. The pipe itself does not auto-short-circuit a Result, SPEC §6.3)
+#
+# `"42" |> parse_code`'s final result is Result[int, str], but it's discarded as an
+# expression statement with neither an assignment nor a `?`. Verifies that this reports E1040.
+
+def parse_code(s: str): Result[int, str]
+    return match s
+        "bad" => Err("invalid")
+        _ => Ok(1)
+
+"42" |> parse_code

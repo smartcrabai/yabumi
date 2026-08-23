@@ -1,0 +1,20 @@
+# Verifies DECISIONS D-SYN-08 (mutual recursion via top-level declaration hoisting).
+# Asserts that the 2 mutually recursive functions, is_even calling is_odd and is_odd
+# calling is_even, work correctly regardless of declaration order.
+
+def is_even(n: int): bool
+    return if n == 0
+        true
+    else
+        is_odd(n - 1)
+
+def is_odd(n: int): bool
+    return if n == 0
+        false
+    else
+        is_even(n - 1)
+
+assert(is_even(10))
+assert(is_odd(7))
+assert(is_even(0))
+assert(not is_odd(0))

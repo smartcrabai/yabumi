@@ -1,0 +1,17 @@
+#!/usr/bin/env ybm
+# Verifies: SPEC §8 (implicit effect propagation for higher-order functions / calling
+# an effectful function from a pure function is forbidden)
+# Decisions: DECISIONS D-EFF-02 (a function value keeps its effectful function type
+#       even after being assigned/stored; a code path that actually "calls" it inside a
+#       pure function body is E2001. Merely holding or passing it along is legal)
+#
+# run_stored has no uses declaration (i.e. is pure). It stores a lambda carrying the
+# effect `fs` in the variable `reader`, then actually calls it as `reader(path)`. Since
+# it's actually called and not merely held, verifies that this reports E2001.
+
+def run_stored(path: str): str
+    reader = (p) => fs.read(p).unwrap_or("")
+    return reader(path)
+
+output = run_stored("data.txt")
+print(output)

@@ -1,0 +1,14 @@
+# Verifies: SPEC §13, §7.2 / D-DOC-05
+# Diagnostic code mapping: DECISIONS.md table (E6005 = top-level `?` propagating an Err)
+# A doc test block runs as an independent program, with no top-level-equivalent effect
+# restriction (§13). Confirms that when a top-level `?` inside the block propagates a
+# Result's Err, the block aborts via a path other than assert and is judged fail.
+
+## Parses a string into an int (deliberately triggers a parse failure).
+##
+## ```
+## n = parse_wrapped("abc")?
+## assert(n > 0)
+## ```
+def parse_wrapped(s: str): Result[int, Error]
+    return s.parse_int()

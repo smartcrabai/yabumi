@@ -1,0 +1,33 @@
+# Verifies SPEC 10's 2 fully independent entries (no module directive; no collision even with same-named functions, pattern 2).
+
+[[case]]
+id = "run_alpha"
+entry = "entry_alpha.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "alpha helper: 42\n" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "entry_beta.ybm also defines its own helper with the same name, but since there's no module directive, they never load each other and E1001 never occurs."
+
+[[case]]
+id = "run_beta"
+entry = "entry_beta.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "beta helper: beta-42\n" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "entry_alpha.ybm also defines its own helper with the same name, but the implementation (including the return type) is entirely different, and neither affects the other."

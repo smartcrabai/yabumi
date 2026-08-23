@@ -1,0 +1,26 @@
+# Verifies: SPEC §9 (concurrent execution) / §7.4 (no panics) / DECISIONS D-ERR-06
+#
+# D-ERR-06: if a panic occurs inside par, the whole process aborts immediately
+# without waiting for other branches to finish. "No fail-fast; wait for all branches
+# to finish" (SPEC §9) applies only to the propagation of Result/Option error
+# values, not to panics (SPEC §7.4: a panic cannot be caught).
+#
+# Verification method: one branch, cause_panic(), takes no arguments and causes an
+# integer division-by-zero panic (D-ERR-04 item 3, E6002) almost immediately. The
+# other branch, slow_branch(), prints only "after" waiting via time.sleep for
+# significantly longer than cause_panic's panic takes. If the implementation waited
+# for all branches to finish, slow_branch's output would appear in stdout, but per
+# D-ERR-06 the process terminates immediately at the moment of cause_panic's panic, so stdout is empty and exit_code is 1.
+
+def cause_panic(): int
+    a = 1
+    b = 0
+    return a / b
+
+def slow_branch(): int uses {time}
+    time.sleep(300)
+    print("slow branch finished")
+    return 42
+
+results = par [cause_panic(), slow_branch()]
+print(f"unreachable: got {results.len()} results")

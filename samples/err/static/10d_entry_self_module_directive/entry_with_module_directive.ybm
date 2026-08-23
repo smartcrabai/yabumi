@@ -1,0 +1,25 @@
+#!/usr/bin/env ybm
+module
+
+# Verifies: boundary case of SPEC §10 "writing a module directive in the entry file itself"
+# Decisions: DECISIONS.md D-LEX-09 (directive detection uses the effective line 1 after shebang
+#       removal; this file also confirms that, despite having a shebang, the following line
+#       being a correct module directive also works), D-MOD-01 (writing a module directive in
+#       the entry file itself applies D-MOD-02's rule (top-level executable statements
+#       forbidden), and since an ordinary entry file has executable statements, this becomes a
+#       type error -- accepted as intentional behavior), D-DIAG-02 (E5002)
+#
+# Note (naming-convention mismatch): per §1.2's naming convention the filename should use the
+# `entry_` prefix, but since its effective line 1 (after shebang removal) carries a module
+# directive, its content is effectively equivalent to `mod_`. Since this directory's
+# verification purpose is exactly "what happens when the file passed to ybm itself carries a
+# module directive," the name deliberately uses `entry_` to prioritize signaling "this is the
+# file passed to ybm as an entry" over literal adherence to the naming convention.
+#
+# The compute call and print below are top-level executable statements, and since only
+# declarations (def/struct/enum/constant) are allowed under a module directive (SPEC §10), they produce E5002.
+
+def compute(x: int): int
+    return x + 1
+
+print(f"result: {compute(1)}")

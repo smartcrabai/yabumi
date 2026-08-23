@@ -1,0 +1,32 @@
+#!/usr/bin/env ybm
+
+# SPEC 11.2 proc verification (real proc.run against the fixture binary).
+# SAMPLES_PLAN.md 1.4/1.4.2: launches the fixture binary pointed to by the
+# YABUMI_TEST_PROC_BIN environment variable via its 3 subcommands, echo/fail/cat, and
+# asserts stdout/stderr/exit_code exactly per section 1.4.2's contract table. The effect footprint is {proc, env}.
+# No uses declaration is needed for a top-level statement (SPEC §8: "top-level implicitly allows every effect").
+# In a runtime environment where requires_env=["YABUMI_TEST_PROC_BIN"] is unset, the
+# harness may skip this case (sections 1.3/1.4). Since `ybm check` only performs
+# type/effect checking regardless of whether the environment variable is set, .unwrap()'s
+# type stays the same and always passes even though env.get may return None.
+#
+# Note: since proc.run has no language-side API for passing standard input to the child
+# process (STDLIB.md §8), verification of the "cat" subcommand is limited to "behavior with empty/closed stdin" (section 1.4.2).
+
+bin = env.get("YABUMI_TEST_PROC_BIN").unwrap()
+
+echoed = proc.run(bin, ["echo", "hello"])?
+assert(echoed.exit_code == 0, "echo should exit with code 0")
+assert(echoed.stdout == "hello\n", "echo hello should print 'hello' followed by a newline")
+assert(echoed.stderr == "", "echo should not write anything to stderr")
+
+failed = proc.run(bin, ["fail", "3"])?
+assert(failed.exit_code == 3, "fail 3 should exit with code 3")
+assert(failed.stdout == "", "fail should not write anything to stdout")
+assert(not failed.stderr.is_empty(), "fail should write a message to stderr")
+
+catted = proc.run(bin, ["cat"])?
+assert(catted.exit_code == 0, "cat should exit with code 0 even with empty/closed stdin")
+assert(catted.stdout == "", "cat with no stdin supplied reads EOF immediately and prints nothing")
+
+print("proc sample done")

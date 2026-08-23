@@ -1,0 +1,34 @@
+# SPEC §3.2: confirms that constructing list/dict/set/tuple literals, and the
+# remove/re-insert boundary behavior of insertion-order preservation (D-COL-01), succeed.
+
+[[case]]
+id = "run_literals_ok"
+entry = "entry_literals.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Verifies via assert the construction of list/dict/set/tuple literals, a single-element tuple, and annotated empty list/set/dict."
+
+[[case]]
+id = "run_edge_cases_ok"
+entry = "entry_edge_cases.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "After insert -> remove -> re-insert on dict/set, retrieves the order via .entries()/.to_list() and asserts that the removed position closes up and the re-insert is appended at the end (D-COL-01)."

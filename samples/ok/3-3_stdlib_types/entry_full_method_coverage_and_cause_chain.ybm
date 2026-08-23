@@ -1,0 +1,99 @@
+# SPEC §3.3: exhaustively covers every Result/Option method, and verifies kind/message
+# via match-decomposition of an Error.cause chain nested 3+ levels deep
+# Referenced decisions: STDLIB.md §3.1 (Result) / §3.2 (Option) / §3.3 (Error)
+# D-STDPOL-05 (constructing an Error always states cause: None explicitly too) / D-TYPE-16 context 2 (a return statement infers from the return-type annotation)
+
+# --- Every Result[T, E] method ---
+ok_r: Result[int, str] = Ok(10)
+err_r: Result[int, str] = Err("bad")
+
+assert(ok_r.is_ok())
+assert(not ok_r.is_err())
+assert(err_r.is_err())
+assert(not err_r.is_ok())
+
+assert(ok_r.ok().unwrap() == 10)
+assert(err_r.ok().is_none())
+assert(err_r.err().unwrap() == "bad")
+assert(ok_r.err().is_none())
+
+assert(ok_r.unwrap_or(0) == 10)
+assert(err_r.unwrap_or(0) == 0)
+
+assert(ok_r.unwrap_or_else((e) => 0) == 10)
+assert(err_r.unwrap_or_else((e) => e.len()) == 3)
+
+assert(ok_r.map((x) => x * 2).unwrap_or(0) == 20)
+assert(err_r.map((x) => x * 2).is_err())
+
+assert(ok_r.map_err((e) => e + "!").is_ok())
+mapped_err = err_r.map_err((e) => e + "!")
+assert(mapped_err.err().unwrap() == "bad!")
+
+def add_one_ok(x: int): Result[int, str]
+    return Ok(x + 1)
+
+assert(ok_r.and_then(add_one_ok).unwrap_or(0) == 11)
+assert(err_r.and_then(add_one_ok).is_err())
+
+# --- Every Option[T] method ---
+some_o: Option[int] = Some(5)
+none_o: Option[int] = None
+
+assert(some_o.is_some())
+assert(not some_o.is_none())
+assert(none_o.is_none())
+assert(not none_o.is_some())
+
+assert(some_o.unwrap_or(0) == 5)
+assert(none_o.unwrap_or(0) == 0)
+
+assert(some_o.unwrap_or_else(() => 99) == 5)
+assert(none_o.unwrap_or_else(() => 99) == 99)
+
+assert(some_o.map((x) => x * 2).unwrap_or(0) == 10)
+assert(none_o.map((x) => x * 2).is_none())
+
+assert(some_o.and_then((x) => Some(x + 1)).unwrap_or(0) == 6)
+assert(none_o.and_then((x) => Some(x + 1)).is_none())
+
+assert(some_o.filter((x) => x % 2 == 0).is_none())
+even_o: Option[int] = Some(4)
+assert(even_o.filter((x) => x % 2 == 0).unwrap_or(0) == 4)
+assert(none_o.filter((x) => x % 2 == 0).is_none())
+
+assert(some_o.ok_or("no value").is_ok())
+assert(some_o.ok_or("no value").unwrap() == 5)
+converted_err: Result[int, str] = none_o.ok_or("no value")
+assert(converted_err.is_err())
+assert(converted_err.err().unwrap() == "no value")
+
+# --- An Error.cause chain nested 3+ levels deep (verifies kind/message via match decomposition) ---
+level1: Error = Error(kind: "net", message: "connection refused", cause: None)
+level2: Error = Error(kind: "proxy", message: "upstream failed", cause: Some(level1))
+level3: Error = Error(kind: "app", message: "request failed", cause: Some(level2))
+level4: Error = Error(kind: "cli", message: "command failed", cause: Some(level3))
+
+def cause_kind(e: Error): str
+    return match e.cause
+        Some(c) => c.kind
+        None => "none"
+
+assert(level4.kind == "cli")
+assert(level4.message == "command failed")
+assert(cause_kind(level4) == "app")
+
+inner1 = level4.cause.unwrap()
+assert(inner1.kind == "app")
+assert(inner1.message == "request failed")
+assert(cause_kind(inner1) == "proxy")
+
+inner2 = inner1.cause.unwrap()
+assert(inner2.kind == "proxy")
+assert(inner2.message == "upstream failed")
+assert(cause_kind(inner2) == "net")
+
+inner3 = inner2.cause.unwrap()
+assert(inner3.kind == "net")
+assert(inner3.message == "connection refused")
+assert(inner3.cause.is_none())

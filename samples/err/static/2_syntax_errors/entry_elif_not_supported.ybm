@@ -1,0 +1,13 @@
+# Verifies: SPEC §6.1 (expression-oriented) / D-SYN-03 if/else layout and multi-branch / D-DIAG-02 E0502
+# There is no dedicated `elif`-equivalent syntax (it isn't even a reserved word). Using
+# `elif` gets it parsed as a plain identifier, and since no operator follows before the
+# next `x`, it becomes an unexpected token, E0502. For multi-branch, nest an if inside
+# an else block, or use match.
+
+def classify(x: int): str
+    if x > 0
+        return "positive"
+    elif x < 0
+        return "negative"
+    else
+        return "zero"

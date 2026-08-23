@@ -1,0 +1,14 @@
+#!/usr/bin/env ybm
+# Verifies: SPEC §7.2 (`?` supports both Result and Option; usable inside a function whose return type matches)
+# Decisions: DECISIONS D-ERR-01 (inside a function returning Result[T,E], `?` may be
+#       used only on a Result-typed expression, not an Option expression; a mismatch is E1060)
+#
+# first_positive returns Result[int, Error], but `xs.find(...)` is an expression
+# returning Option[int]; using `?` on it, verifies this reports a type mismatch (E1060).
+
+def first_positive(xs: list[int]): Result[int, Error]
+    v = xs.find((x) => x > 0)?
+    return v
+
+result = first_positive([1, 2, 3])
+print(result.unwrap())

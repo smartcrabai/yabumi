@@ -1,0 +1,44 @@
+#!/usr/bin/env ybm
+
+# SPEC 11.1 / D-STDPOL-03 verification: json/yaml/toml's assignment-target-annotation-
+# driven decode (`data: User = json.decode(s)?`), encode, and dynamic decode via T=Value.
+
+struct User
+    name: str
+    age: int
+
+# --- json ---
+json_input = "{\"name\":\"alice\",\"age\":30}"
+user_from_json: User = json.decode(json_input)?
+assert(user_from_json.name == "alice")
+assert(user_from_json.age == 30)
+
+encoded_json = json.encode(user_from_json)
+assert(encoded_json.contains("alice"))
+assert(encoded_json.contains("30"))
+
+json_dynamic: Value = json.decode(json_input)?
+name_value = json_dynamic.get("name").unwrap()
+assert(name_value.as_str().unwrap() == "alice")
+
+# --- yaml ---
+yaml_input = "name: bob\nage: 25\n"
+user_from_yaml: User = yaml.decode(yaml_input)?
+assert(user_from_yaml.name == "bob")
+assert(user_from_yaml.age == 25)
+
+encoded_yaml = yaml.encode(user_from_yaml)
+assert(encoded_yaml.contains("bob"))
+assert(encoded_yaml.contains("25"))
+
+# --- toml (root is a table; struct can be represented as a table, matching D-STDPOL-09's constraint) ---
+toml_input = "name = \"carol\"\nage = 40\n"
+user_from_toml: User = toml.decode(toml_input)?
+assert(user_from_toml.name == "carol")
+assert(user_from_toml.age == 40)
+
+encoded_toml = toml.encode(user_from_toml)
+assert(encoded_toml.contains("carol"))
+assert(encoded_toml.contains("40"))
+
+print("json/yaml/toml decode+encode ok")

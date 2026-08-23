@@ -1,0 +1,20 @@
+# Follows the schema in SAMPLES_PLAN.md section 1.3.
+# Verifies SPEC 11.2 / STDLIB.md §6 http by executing it against SAMPLES_PLAN.md section
+# 1.4.1's mock-server contract table. In a runtime environment where an environment
+# variable listed in requires_env is unset, the harness may skip this case (sections 1.3/1.4).
+
+[[case]]
+id = "run_ok"
+entry = "entry_main.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "http sample done\n" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = ["YABUMI_TEST_HTTP_BASE"]
+notes = "Verifies get/post/put/delete and HttpOptions+request (headers/timeout_ms) exactly per section 1.4.1's contract table."

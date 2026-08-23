@@ -1,0 +1,41 @@
+# Verifies: SPEC §13 / D-DOC-03
+# Confirms, for each of the 4 kinds of declaration, that a `##` doc comment immediately
+# preceding a def / struct / enum / module-level constant is generalized as a doc test target (D-DOC-03).
+
+## Approximate value of pi (immediately before a module-level constant, D-DOC-03).
+##
+## ```
+## assert(pi_approx > 3.0)
+## ```
+pi_approx = 3.14
+
+## Adds two ints (immediately before a def, D-DOC-03).
+##
+## ```
+## assert(add(1, 2) == 3)
+## ```
+def add(a: int, b: int): int
+    return a + b
+
+## A planar coordinate (immediately before a struct, D-DOC-03).
+##
+## ```
+## p = Point(x: 1, y: 2)
+## assert(p.x == 1)
+## ```
+struct Point
+    x: int
+    y: int
+
+## A kind of shape (immediately before an enum, D-DOC-03).
+##
+## ```
+## s = Circle(2.0)
+## area_ok = match s
+##     Circle(r) => r == 2.0
+##     Rect(w, h) => w == h
+## assert(area_ok)
+## ```
+enum Shape
+    Circle(radius: float)
+    Rect(w: float, h: float)

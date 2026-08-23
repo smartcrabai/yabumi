@@ -1,0 +1,32 @@
+# SPEC §3.1/§6.4: verifies the primitive conversion functions (int/float/str) and the round-trip invariant of parse_int/parse_float
+# Referenced decisions: D-TYPE-14 (int(x:float) truncates toward 0; str(x) has a round-trip invariant with parse_int/parse_float)
+# STDLIB.md §1.1 (type conversion) / §1.5 (str.parse_int/parse_float)
+
+# Basic int()/float() conversion (D-TYPE-14)
+assert(int(3.9) == 3)
+assert(int(-3.9) == -3)
+assert(float(2) == 2.0)
+
+# Basic str() conversion
+assert(str(42) == "42")
+pi_str = str(3.14)
+assert(pi_str.contains("."))
+
+# parse_int/parse_float are str methods (STDLIB.md §1.5)
+assert("42".parse_int().unwrap() == 42)
+assert("3.14".parse_float().unwrap() == 3.14)
+
+# Round-trip invariant: str(n).parse_int() == n / str(x).parse_float() == x (D-TYPE-14)
+n1 = 0
+n2 = 42
+n3 = -17
+assert(str(n1).parse_int().unwrap() == n1)
+assert(str(n2).parse_int().unwrap() == n2)
+assert(str(n3).parse_int().unwrap() == n3)
+
+x1 = 0.0
+x2 = 3.14
+x3 = -2.5
+assert(str(x1).parse_float().unwrap() == x1)
+assert(str(x2).parse_float().unwrap() == x2)
+assert(str(x3).parse_float().unwrap() == x3)

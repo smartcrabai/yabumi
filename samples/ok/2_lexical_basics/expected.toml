@@ -1,0 +1,18 @@
+# SPEC §2 (lexical): confirms that the lexical rules for ignoring the shebang, mixing
+# #/## comments, and 4-space-increment indentation are accepted correctly and run successfully.
+
+[[case]]
+id = "run_ok"
+entry = "entry_main.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Line 1's shebang is ignored, and a file containing # line comments, ## doc comments, and 4-space-increment multi-level if-expression indentation succeeds at both type-checking and execution. stdout/stderr are empty since print/eprint are not used."

@@ -1,0 +1,50 @@
+# err/static/6-4_operator_type_errors
+# Verifies: SPEC §6.3/§6.4. Operator type constraint violations (including a precedence pitfall).
+
+[[case]]
+id = "int_float_mixed_arithmetic"
+entry = "entry_int_float_mixed_arithmetic.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1050"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E1050]" }
+doc_blocks = []
+requires_env = []
+notes = "Mixed int/float arithmetic with no implicit conversion is E1050 (D-OP-03)"
+
+[[case]]
+id = "struct_ordering_comparison"
+entry = "entry_struct_ordering_comparison.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1051"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E1051]" }
+doc_blocks = []
+requires_env = []
+notes = "Using `<` on a struct is using a type that cannot be ordering-compared, E1051 (D-OP-05)"
+
+[[case]]
+id = "not_precedence_pitfall"
+entry = "entry_not_precedence_pitfall.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1020", "E1051"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E1051]" }
+doc_blocks = []
+requires_env = []
+notes = "`not x > 3` parses as `(not x) > 3`; non-bool `not` and the resulting ordering are both diagnosed."

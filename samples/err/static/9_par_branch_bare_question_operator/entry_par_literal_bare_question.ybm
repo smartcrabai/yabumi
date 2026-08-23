@@ -1,0 +1,18 @@
+#!/usr/bin/env ybm
+# Verifies: SPEC §7.2 (`?`'s scope is the innermost function), §9 (par: no fail-fast; wait for all branches)
+# Decisions: DECISIONS D-PAR-03 (a bare top-level `?` inside a par branch is forbidden,
+#       treated as a syntax error, E0502. If `?` propagated an Err/None inside a branch,
+#       the whole outer function would return early, conflicting with the "no
+#       fail-fast; wait for all branches" rule while other branches may still be
+#       running on other threads)
+#
+# Writes `?` directly on one branch's expression in a `par [...]` literal. A bare `?`
+# at this position is syntactically forbidden; verifies that this reports E0502.
+
+def parse_code(s: str): Result[int, str]
+    return match s
+        "bad" => Err("invalid")
+        _ => Ok(1)
+
+results = par [parse_code("1")?, parse_code("2")]
+print(results.len())

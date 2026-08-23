@@ -1,0 +1,13 @@
+#!/usr/bin/env ybm
+# Verifies: detection of a syntax error in SPEC §10 "a module file's line 1 must be the module directive"
+# Decisions: DECISIONS.md D-LEX-08 (a module directive is fixed as the bare keyword with no name),
+#       D-LEX-09 (directive detection uses the effective line 1, after shebang removal), D-MOD-01 (auto-import covers only the same directory)
+#
+# This file itself is an ordinary entry file with no module directive, and is correct
+# on its own for both type-checking and execution. The same-directory
+# mod_bad_directive.ybm carries a malformed module directive (`module foo`), so when it
+# is scanned as an auto-import target, E5001 fires, and this "probe" entry confirms
+# that check on this file fails as a chain reaction too.
+
+x = 1 + 1
+print(f"probe: {x}")

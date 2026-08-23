@@ -1,0 +1,19 @@
+# Verifies: SPEC §7.4 / DECISIONS D-ERR-04 item 7, D-DIAG-02 (E6008)
+# Confirms that a recursive function call with no termination condition overflows the
+# stack and terminates immediately with E6008.
+
+[[case]]
+id = "unbounded_recursion"
+entry = "entry_unbounded_recursion.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E6008"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E6008]" }
+doc_blocks = []
+requires_env = []
+notes = "Confirms that recurse(n) recurses into itself infinitely via n+1 with no termination condition, causing a stack overflow (E6008) and terminating immediately."

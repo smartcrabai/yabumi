@@ -1,0 +1,13 @@
+# Verifies: SPEC §4 (variables and mutability) / D-MUT-03 how nested mutability
+# propagation is judged / D-DIAG-02 E3001
+# A destructive method call on a nested target, like `u.tags.push(x)`, recursively
+# checks whether the root variable (u) the whole expression ultimately reaches is a var
+# binding. If the root is not var, this produces E3001.
+
+struct User
+    name: str
+    tags: list[str]
+
+u = User(name: "alice", tags: ["a"])
+u.tags.push("b")
+print(u.tags.len())

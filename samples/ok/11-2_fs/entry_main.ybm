@@ -1,0 +1,35 @@
+#!/usr/bin/env ybm
+
+# SPEC 11.2 fs verification: read/write/append/list/exists/remove
+# STDLIB.md §5 fs -- effect: fs.
+# - fs.write/fs.append/fs.remove return Option[Error] (None = success, D-TYPE-08).
+# - Writes are restricted to under the _out/ sandbox (SAMPLES_PLAN.md section 1.4;
+# the harness cleans up _out/'s contents, other than .gitkeep, before and after the run).
+# No uses declaration is needed for a top-level statement (SPEC §8: "top-level implicitly allows every effect").
+
+path = "_out/greeting.txt"
+
+write_result = fs.write(path, "hello")
+assert(write_result.is_none(), "fs.write should succeed, returning None")
+
+content = fs.read(path)?
+assert(content == "hello", "fs.read should read back exactly what fs.write wrote")
+
+append_result = fs.append(path, " world")
+assert(append_result.is_none(), "fs.append should succeed, returning None")
+
+appended = fs.read(path)?
+assert(appended == "hello world", "fs.append should append to the existing content")
+
+assert(fs.exists(path), "fs.exists should be true for a file that was just written")
+assert(not fs.exists("_out/does_not_exist.txt"), "fs.exists should be false for a missing file")
+
+entries = fs.list("_out")?
+assert(entries.any((p) => p.ends_with("greeting.txt")), "fs.list should include the written file's full path")
+
+remove_result = fs.remove(path)
+assert(remove_result.is_none(), "fs.remove should succeed, returning None")
+
+assert(not fs.exists(path), "fs.exists should be false right after fs.remove")
+
+print("fs sample done")

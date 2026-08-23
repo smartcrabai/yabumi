@@ -1,0 +1,12 @@
+# Verifies: SPEC §3.5 (struct), §4 (variables and mutability) / D-MUT-02 a mutable
+# receiver is the sole exception to value semantics / D-DIAG-02 E3001
+# There is no per-field mutability specification; it follows the binding's `var`.
+# Rewriting a field on a struct variable that is not a var binding produces E3001.
+
+struct Point
+    x: int
+    y: int
+
+p = Point(x: 1, y: 2)
+p.x = 3
+print(p.x)

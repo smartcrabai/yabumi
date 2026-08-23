@@ -1,0 +1,12 @@
+#!/usr/bin/env ybm
+
+# Verifies: SPEC §9 / DECISIONS D-PAR-02 (recursive use of par/par_map/par_each is
+# permitted without restriction; nesting a par call inside par is possible).
+
+def inner_par(x: int): list[int]
+    return par [x * 2, x * 3]
+
+results = par [inner_par(1), inner_par(2)]
+assert(results == [[2, 3], [4, 6]])
+
+print("par nested ok")

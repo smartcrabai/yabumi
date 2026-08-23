@@ -1,0 +1,15 @@
+#!/usr/bin/env ybm
+# Verifies: SPEC §6.1 (a non-enum scrutinee is outside the scope of "an enum match has an exhaustiveness check")
+# Decisions: DECISIONS D-TYPE-18 (a match on an int/str scrutinee requires a wildcard
+#       `_` arm; a missing one is E1021)
+#
+# The match on an int scrutinee has no `_` arm. Since the possibility of encountering,
+# at runtime, "a value matching no arm" cannot be statically ruled out, verifies that this reports E1021 (exhaustiveness violation).
+
+def describe(n: int): str
+    return match n
+        1 => "one"
+        2 => "two"
+
+result = describe(1)
+print(result)

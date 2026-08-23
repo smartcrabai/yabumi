@@ -1,0 +1,34 @@
+# Verifies SPEC 10's shared module + 2 independent entries (pattern 1).
+# mod_shapes.ybm carries a module directive, so it's never given directly as an entry (declarations only on its own).
+
+[[case]]
+id = "run_area_report"
+entry = "entry_area_report.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "areas computed for: circle-a, rect-a, circle-b\n" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Uses mod_shapes.ybm's struct/enum/area function to compute and print a list of areas. Confirms auto-import per D-MOD-01/03/04."
+
+[[case]]
+id = "run_shape_filter"
+entry = "entry_shape_filter.ybm"
+cmd = "run"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "large shapes: circle-a, rect-a\n" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Uses the same shared module's types to compute and print a list of shapes filtered by a condition. Confirms both entries auto-import the same mod_shapes.ybm."

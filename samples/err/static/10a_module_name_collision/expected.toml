@@ -1,0 +1,17 @@
+# Verifies: SPEC §10 name collision, DECISIONS.md D-TYPE-07 / D-MOD-01 / D-MOD-05
+
+[[case]]
+id = "check_name_collision"
+entry = "entry_main.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = ["E1001"]
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "contains", value = "[E1001]" }
+doc_blocks = []
+requires_env = []
+notes = "The same-directory mod_util.ybm (which carries a module directive) is auto-imported alongside entry_main.ybm, and the top-level function format_greeting with the same name collides in the single flat namespace (D-MOD-01/D-TYPE-07). Per D-MOD-05, the diagnostic format embeds both definition locations in the duplicate-definition message."

@@ -1,0 +1,27 @@
+#!/usr/bin/env ybm
+# Verifies: SPEC §6.1 (multi-statement notation for match arms)
+# Decisions: DECISIONS D-SYN-11 (unless a multi-statement arm's tail is an expression
+#       statement, the block's value is undetermined -- E1020, the same category as
+#       if/match branches failing to unify)
+#
+# The Stop arm consists of multiple statements, and its final statement is
+# `var _ = 0` (a var declaration with no value). Verifies that, since the block's
+# value is undetermined, the match expression as a whole reports E1020. It uses the
+# reserved discard identifier `_` (per D-LEX-01's reserved-word table, explicitly
+# exempted from E4001 by D-LINT-01) as the binding name so that an unused-variable
+# lint (E4001) doesn't creep in separately.
+
+enum Signal
+    Go
+    Stop
+
+def decide(signal: Signal): int
+    return match signal
+        Go =>
+            var x = 1
+            x + 1
+        Stop =>
+            var _ = 0
+
+result = decide(Go)
+print(result)

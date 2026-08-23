@@ -1,0 +1,37 @@
+#!/usr/bin/env ybm
+
+# Verifies SPEC 8 / D-FUNC-03's transitive effect propagation, and the effect union in
+# a higher-order function with multiple function-typed arguments.
+#
+# 1. A 3-level call chain, level_a -> level_b -> level_c. Each function declares
+# `uses {time}`, exactly the sum of the effects of what it calls (showing that no
+# level adds a new effect, and each keeps summing and declaring the downstream effect
+# unchanged, passing it straight through).
+# 2. combine_two is a higher-order function taking 2 function-typed arguments, f: () ->
+# T and g: () -> U (it has no uses declaration itself). gather calls it, passing
+# lambdas each carrying a different effect (time / fs), so gather itself must declare
+# their union, `uses {time, fs}`.
+
+def level_c(): int uses {time}
+    return time.now()
+
+def level_b(): int uses {time}
+    return level_c()
+
+def level_a(): int uses {time}
+    return level_b()
+
+def combine_two[T, U](f: () -> T, g: () -> U): tuple[T, U]
+    return (f(), g())
+
+def gather(): tuple[int, str] uses {time, fs}
+    return combine_two(() => time.now(), () => fs.read("_out/definitely_missing_for_effects_test.txt").unwrap_or("fallback"))
+
+now_via_chain = level_a()
+assert(now_via_chain >= 0)
+
+pair = gather()
+assert(pair.0 >= 0)
+assert(pair.1 == "fallback")
+
+print("transitive effects ok")
