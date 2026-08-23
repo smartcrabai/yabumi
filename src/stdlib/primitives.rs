@@ -19,9 +19,7 @@ const I64_MAX_BOUND_AS_F64: f64 = 9_223_372_036_854_775_808.0;
 /// (integer overflow).
 pub fn int_from_float(x: f64, span: Span) -> Result<Value, Abort> {
     let truncated = x.trunc();
-    if !truncated.is_finite()
-        || !(I64_MIN_AS_F64..I64_MAX_BOUND_AS_F64).contains(&truncated)
-    {
+    if !truncated.is_finite() || !(I64_MIN_AS_F64..I64_MAX_BOUND_AS_F64).contains(&truncated) {
         return Err(panic::overflow(span));
     }
     #[expect(
