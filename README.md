@@ -18,6 +18,23 @@ brew install smartcrabai/tap/yabumi
 curl --proto '=https' --tlsv1.2 -LsSf \
   https://github.com/smartcrabai/yabumi/releases/latest/download/yabumi-installer.sh | sh
 ```
+### Agent Skill
+
+This repository includes the `yabumi` skill under `skills/yabumi/`.
+
+#### npx skills
+
+```sh
+npx skills add smartcrabai/yabumi --skill yabumi
+```
+
+#### GitHub CLI
+
+Requires GitHub CLI 2.90.0 or later.
+
+```sh
+gh skill install smartcrabai/yabumi yabumi
+```
 
 ## Build
 
