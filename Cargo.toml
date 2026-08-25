@@ -6,7 +6,7 @@ homepage = "https://github.com/smartcrabai/yabumi"
 license = "MIT"
 name = "yabumi"
 repository = "https://github.com/smartcrabai/yabumi"
-version = "0.1.0"
+version = "0.1.1"
 
 [features]
 default = []
