@@ -514,12 +514,12 @@ A string-to-number parse failure (`parse_int`/`parse_float`) is not a panic — 
 ## 12. Execution Model & CLI (RUN / CLI)
 
 ### D-CLI-01 Output destination for diagnostics and output
-**Decision**: All error/warning diagnostics (lines in `[Exxxx]` format) are written to stderr. The fmt diff shown by `ybm check --check` and the pass/fail summary from `ybm test` are written to stdout. During normal execution (`ybm`), `print`/`eprint` write to stdout/stderr respectively (as per §11.3).
+**Decision**: All error/warning diagnostics (lines in `[Exxxx]` format) are written to stderr. The fmt diff shown by `ybm check` and the pass/fail summary from `ybm test` are written to stdout. During normal execution (`ybm`), `print`/`eprint` write to stdout/stderr respectively (as per §11.3).
 **Rationale**: CI use cases require diagnostics and program output to be separable for piping, and the Unix convention (diagnostics = stderr, results = stdout) maximizes machine-readability.
 **SPEC reference**: §1
 
-### D-CLI-02 Position of the `--check` flag
-**Decision**: `ybm check <file> --check` is the canonical syntax. The flag's position may come either before or after (`ybm check --check <file>` is equivalent).
+### D-CLI-02 Position and meaning of the `--apply` flag
+**Decision**: `ybm check <file>` is the canonical read-only syntax: fmt output is compared byte-for-byte and a diff exits 1 without writing. `ybm check --apply <file>` requests the in-place fmt rewrite. The flag may come either before or after the file (`ybm check <file> --apply` is equivalent).
 **SPEC reference**: §1
 
 ### D-CLI-03 Reporting all diagnostics
@@ -584,7 +584,7 @@ The threshold was set to 3 because both SPEC §6.3's `x |> parse? |> validate?` 
 **SPEC reference**: §3.2, §12
 
 ### D-FMT-06 Relationship between fmt and code inside a doc-comment fence
-**Decision**: fmt (the in-place rewrite done by `ybm check`) does not apply to the contents of a `##` doc comment's fence block (with no language tag). The Yabumi code inside a fence is preserved exactly as written and is not a target of rewriting by fmt.
+**Decision**: fmt (the in-place rewrite done by `ybm check --apply`) does not apply to the contents of a `##` doc comment's fence block (with no language tag). The Yabumi code inside a fence is preserved exactly as written and is not a target of rewriting by fmt.
 **Rationale**: Formatting the code inside a fence could change its line count, creating a complex interaction where the recomputation order for D-DOC-05 (that a failure report's line number is the actual line number in the source file) would depend on the execution order of fmt versus doc tests. Excluding fence contents from formatting eliminates this complexity entirely from the implementation (consistent with the zero-dependency-distribution / implementation-simplicity priority). Even if the code inside a fence is not in canonical form, this has no effect on the doc test's type checking or execution result.
 **SPEC reference**: §12, §13
 

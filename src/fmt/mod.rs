@@ -11,8 +11,8 @@ pub mod printer;
 
 use crate::ast::Module;
 
-/// Called by `ybm check` (without `--check`): returns the formatted result (the caller
-/// performs the in-place write).
+/// Called by `ybm check`; the caller writes the formatted result only when `--apply` is set.
+/// Returns the formatted result.
 pub fn format_module(module: &Module) -> String {
     printer::print_module(module)
 }

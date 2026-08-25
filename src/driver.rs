@@ -59,7 +59,7 @@ pub fn run_pipeline(subcommand: &Subcommand) -> ExitCode {
 fn run_pipeline_impl(subcommand: &Subcommand, out: &mut dyn Write, err: &mut dyn Write) -> bool {
     match subcommand {
         Subcommand::Run { file } => run_command(file, err),
-        Subcommand::Check { file, check_only } => check_command(file, *check_only, out, err),
+        Subcommand::Check { file, apply_fmt } => check_command(file, *apply_fmt, out, err),
         Subcommand::Test { file } => test_command(file, out, err),
     }
 }
@@ -109,7 +109,12 @@ fn run_command(file: &Path, err: &mut dyn Write) -> bool {
     }
 }
 
-fn check_command(file: &Path, check_only: bool, out: &mut dyn Write, err: &mut dyn Write) -> bool {
+fn check_command(
+    file: &Path,
+    apply_formatting: bool,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> bool {
     let Ok(front) = run_front_end(file, true, err) else {
         return false;
     };
@@ -135,7 +140,7 @@ fn check_command(file: &Path, check_only: bool, out: &mut dyn Write, err: &mut d
         return false;
     }
 
-    apply_fmt(&files, &sources, check_only, out, err)
+    apply_fmt(&files, &sources, apply_formatting, out, err)
 }
 
 fn test_command(file: &Path, out: &mut dyn Write, err: &mut dyn Write) -> bool {
@@ -493,7 +498,7 @@ fn typecheck_fences_only(fences: &[DocFence], program: &Program, diagnostics: &m
 }
 
 // ---------------------------------------------------------------------------
-// fmt (`ybm check`'s in-place rewrite / `--check` diff, ARCHITECTURE.md §4.3, D-MOD-04).
+// fmt (`ybm check`'s read-only default / `--apply` rewrite, ARCHITECTURE.md §4.3, D-MOD-04).
 // ---------------------------------------------------------------------------
 
 /// Splits a shebang line (starting with `#!`) from the rest. Same split rule as
@@ -544,12 +549,12 @@ fn format_file_text(original: &str, file: FileId) -> String {
 }
 
 /// D-MOD-04: fmt applies to all files — the entry plus its sibling-directory modules. When
-/// `check_only` is set, no write happens; instead it only determines whether a diff exists and
+/// `apply_fmt` is false, no write happens; instead it only determines whether a diff exists and
 /// prints the diff content to stdout (D-CLI-01).
 fn apply_fmt(
     files: &[(PathBuf, FileId)],
     sources: &SourceMap,
-    check_only: bool,
+    apply_fmt: bool,
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> bool {
@@ -560,7 +565,7 @@ fn apply_fmt(
         outputs.push((path.clone(), original, formatted));
     }
 
-    if check_only {
+    if !apply_fmt {
         let mut any_diff = false;
         for (path, original, formatted) in &outputs {
             if original != formatted {
@@ -1079,11 +1084,11 @@ mod tests {
             "run" => Ok(Subcommand::Run { file: entry_path }),
             "check" => Ok(Subcommand::Check {
                 file: entry_path,
-                check_only: false,
+                apply_fmt: true,
             }),
             "check_diff" => Ok(Subcommand::Check {
                 file: entry_path,
-                check_only: true,
+                apply_fmt: false,
             }),
             "test" => Ok(Subcommand::Test { file: entry_path }),
             other => Err(format!("unknown cmd '{other}'")),
@@ -1201,8 +1206,8 @@ mod tests {
             return CaseOutcome::Skipped;
         }
 
-        // To protect `samples/` itself not only from `check`'s in-place rewrite but also from
-        // side effects `run`/`test` might cause by writing under `_out/` via `fs.write` etc.,
+        // To protect `samples/` itself not only from `ybm check --apply`'s in-place rewrite but
+        // also from side effects `run`/`test` might cause by writing under `_out/` via
         // copy into a temp directory before running, for every command (`SAMPLES_PLAN.md`
         // §1.4, same policy as `tests/samples.rs`).
         let work_dir = scratch_dir_for(dir, &case.id);
@@ -1330,7 +1335,7 @@ mod tests {
         ];
         let mut out = Vec::new();
         let mut err = Vec::new();
-        assert!(!apply_fmt(&files, &sources, true, &mut out, &mut err));
+        assert!(!apply_fmt(&files, &sources, false, &mut out, &mut err));
         assert!(!out.is_empty());
         assert!(err.is_empty());
         assert_eq!(
@@ -1343,7 +1348,7 @@ mod tests {
         );
 
         out.clear();
-        assert!(apply_fmt(&files, &sources, false, &mut out, &mut err));
+        assert!(apply_fmt(&files, &sources, true, &mut out, &mut err));
         assert!(err.is_empty());
         assert_eq!(
             fs::read_to_string(&entry_path).ok().as_deref(),
@@ -1388,7 +1393,7 @@ mod tests {
 
         let (ok, out, err) = run_case_pipeline(&Subcommand::Check {
             file: entry,
-            check_only: true,
+            apply_fmt: false,
         });
         assert!(!ok);
         assert!(out.is_empty());

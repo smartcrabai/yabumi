@@ -33,7 +33,7 @@ stdout = { mode = "contains", value = "" }
 stderr = { mode = "contains", value = "" }
 doc_blocks = []
 requires_env = []
-notes = "ybm check --check judges the non-canonical form as having a diff and exits 1 (D-CLI-02)."
+notes = "ybm check judges the non-canonical form as having a diff and exits 1 (D-CLI-02)."
 
 [[case]]
 id = "check_diff_idempotent_on_canonical_form"

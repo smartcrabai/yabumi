@@ -19,7 +19,7 @@ stdout = { mode = "exact", value = "" }
 stderr = { mode = "exact", value = "" }
 doc_blocks = []
 requires_env = []
-notes = "ybm check sample.in.ybm. Type-checking and the effect check succeed, and the content after in-place fmt byte-matches sample.out.ybm (D-SYN-05's base-line + 4 normalization). Since check never executes, stdout/stderr are empty."
+notes = "ybm check --apply sample.in.ybm. Type-checking and the effect check succeed, and the content after in-place fmt byte-matches sample.out.ybm (D-SYN-05's base-line + 4 normalization). Since check never executes, stdout/stderr are empty."
 
 [[case]]
 id = "check_diff_detects_nonnormalized_indent"
@@ -35,7 +35,7 @@ stdout = { mode = "contains", value = "" }
 stderr = { mode = "exact", value = "" }
 doc_blocks = []
 requires_env = []
-notes = "ybm check sample.in.ybm --check. Since the continuation-line indent isn't normalized to base line + 4, there is a diff (fmt_diff_expected=true), and it exits 1 with no rewrite. Per D-CLI-01 the diff display goes to stdout, but since its exact display format is unspecified by SPEC/DECISIONS, stdout here is mode=contains value=\"\" (not asserting the content, always true)."
+notes = "ybm check sample.in.ybm. Since the continuation-line indent isn't normalized to base line + 4, there is a diff (fmt_diff_expected=true), and it exits 1 with no rewrite. Per D-CLI-01 the diff display goes to stdout, but since its exact display format is unspecified by SPEC/DECISIONS, stdout here is mode=contains value=\"\" (not asserting the content, always true)."
 
 [[case]]
 id = "check_diff_on_normalized_form_has_no_diff"
@@ -51,7 +51,7 @@ stdout = { mode = "exact", value = "" }
 stderr = { mode = "exact", value = "" }
 doc_blocks = []
 requires_env = []
-notes = "sample.out.ybm is already canonical, so --check reports no diff and exits 0 (confirms fmt(fmt(x)) = fmt(x))."
+notes = "sample.out.ybm is already canonical, so ybm check reports no diff and exits 0 (confirms fmt(fmt(x)) = fmt(x))."
 
 [[case]]
 id = "check_on_normalized_form_is_noop"
@@ -67,4 +67,4 @@ stdout = { mode = "exact", value = "" }
 stderr = { mode = "exact", value = "" }
 doc_blocks = []
 requires_env = []
-notes = "Running check's in-place rewrite on sample.out.ybm also byte-matches sample.out.ybm itself (idempotency)."
+notes = "Running ybm check --apply on sample.out.ybm also byte-matches sample.out.ybm itself (idempotency)."

@@ -43,7 +43,7 @@ pub(crate) fn apply_to_command(command: &mut Command) {
 }
 
 /// `args(): list[str] uses {env}`. Arguments to the script itself; does not include the
-/// executable path, subcommand, entry path, or `check` command's `--check` flag.
+/// executable path, subcommand, entry path, or `check` command's `--apply` flag.
 #[must_use]
 pub fn args() -> Value {
     let items = script_args(std::env::args().collect())
@@ -60,7 +60,7 @@ fn script_args(argv: Vec<String>) -> Vec<String> {
         Some("check") => {
             let mut found_file = false;
             rest.filter_map(|arg| {
-                if arg == "--check" {
+                if arg == "--apply" {
                     None
                 } else if found_file {
                     Some(arg)
@@ -136,11 +136,11 @@ mod tests {
             ["--check"]
         );
         assert_eq!(
-            script_args(argv(&["ybm", "check", "--check", "entry_main.ybm", "foo"])),
+            script_args(argv(&["ybm", "check", "--apply", "entry_main.ybm", "foo"])),
             ["foo"]
         );
         assert_eq!(
-            script_args(argv(&["ybm", "check", "entry_main.ybm", "foo", "--check"])),
+            script_args(argv(&["ybm", "check", "entry_main.ybm", "foo", "--apply"])),
             ["foo"]
         );
         assert_eq!(

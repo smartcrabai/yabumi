@@ -291,7 +291,7 @@ def add(a: int, b: int): int
 
 ## Formatter and lint
 
-`ybm check file.ybm` type-checks, formats in place, and lints. Any warning exits 1. Avoid:
+`ybm check file.ybm` type-checks, checks formatting without writing, and lints. Use `ybm check --apply file.ybm` when an explicit in-place rewrite is wanted. Any warning exits 1. Avoid:
 
 - unused local bindings, parameters, or match bindings (`E4001`); names beginning with `_` are exempt;
 - entry-file functions unreachable from top-level code or doc tests (`E4002`);

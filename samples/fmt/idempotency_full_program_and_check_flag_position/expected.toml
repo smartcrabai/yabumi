@@ -1,4 +1,4 @@
-# Verifies: SPEC §1/§12, DECISIONS D-CLI-02 (--check flag position) plus
+# Verifies: SPEC §1/§12, DECISIONS D-CLI-02 (--apply flag position) plus
 # fmt(fmt(x)) = fmt(x) idempotency across multiple fmt rules.
 #
 # sample.in.ybm is a practical, complete program that packs, all at once, into
@@ -9,16 +9,13 @@
 # stages), and D-SYN-05 (normalizing `.`/`|>` continuation-line indent to the base line
 # + 4). sample.out.ybm is the single canonical form after every rule is applied.
 #
-# D-CLI-02: `ybm check <file> --check` and `ybm check --check <file>` are synonymous
-# (the flag may go either before or after entry). cmd="check_diff" already means, by
-# definition, `ybm check <entry> --check` (the postfix form) (SAMPLES_PLAN.md §1.3), so
-# the postfix case can leave args=[] as-is. Since the schema has no dedicated field for
-# the prefix form (`ybm check --check <entry>`), only the prefix case sets
-# args=["--check"], as a note to harness implementers making explicit that this means
-# "call with the flag placed before entry, rather than cmd's default postfix form".
+# D-CLI-02: `ybm check <file> --apply` and `ybm check --apply <file>` are synonymous
+# (the flag may go either before or after entry). cmd="check" maps to the postfix
+# `ybm check <entry> --apply` form by default. The prefix case sets cmd="check" and
+# args=["--apply"], instructing the harness to place the flag before entry.
 
 [[case]]
-id = "check_diff_flag_postfix"
+id = "check_diff_default_read_only"
 entry = "sample.in.ybm"
 cmd = "check_diff"
 args = []
@@ -31,26 +28,26 @@ stdout = { mode = "contains", value = "" }
 stderr = { mode = "exact", value = "" }
 doc_blocks = []
 requires_env = []
-notes = "Assumed command: ybm check sample.in.ybm --check (the postfix form, placing the flag after entry -- exactly cmd=check_diff's default form). Valid syntax per D-CLI-02. Since it's pre-formatting, there is a diff (fmt_diff_expected=true), and it exits 1 with no rewrite. Since stdout's diff-display format is unspecified by SPEC/DECISIONS, this uses mode=contains value=\"\" (not asserting the content)."
+notes = "Assumed command: ybm check sample.in.ybm (the read-only default). Since it's pre-formatting, there is a diff (fmt_diff_expected=true), and it exits 1 with no rewrite. Since stdout's diff-display format is unspecified by SPEC/DECISIONS, this uses mode=contains value=\"\" (not asserting the content)."
 
 [[case]]
-id = "check_diff_flag_prefix"
+id = "check_apply_flag_prefix"
 entry = "sample.in.ybm"
-cmd = "check_diff"
-args = ["--check"]
+cmd = "check"
+args = ["--apply"]
 stdin_file = ""
-exit_code = 1
+exit_code = 0
 diagnostics = []
-fmt_diff_expected = true
-fmt_result_file = ""
-stdout = { mode = "contains", value = "" }
+fmt_diff_expected = false
+fmt_result_file = "sample.out.ybm"
+stdout = { mode = "exact", value = "" }
 stderr = { mode = "exact", value = "" }
 doc_blocks = []
 requires_env = []
-notes = "Assumed command: ybm check --check sample.in.ybm (the prefix form, placing the flag before entry). args=[\"--check\"] is used as an instruction to the harness meaning \"for this case only, call with the prefix form rather than cmd=check_diff's default postfix form\" (a substitute representation, since the schema has no dedicated field for flag position). This case's claim is that, per D-CLI-02, its result (exit_code / fmt_diff_expected) exactly matches the postfix case's."
+notes = "Assumed command: ybm check --apply sample.in.ybm (the prefix form). The explicit --apply flag rewrites the non-canonical source to sample.out.ybm and exits 0."
 
 [[case]]
-id = "check_rewrites_in_place_to_normal_form"
+id = "check_apply_rewrites_to_normal_form"
 entry = "sample.in.ybm"
 cmd = "check"
 args = []
@@ -63,7 +60,7 @@ stdout = { mode = "exact", value = "" }
 stderr = { mode = "exact", value = "" }
 doc_blocks = []
 requires_env = []
-notes = "ybm check sample.in.ybm. Type-checking and the effect check succeed, and the content after in-place fmt byte-matches sample.out.ybm."
+notes = "ybm check --apply sample.in.ybm. Type-checking and the effect check succeed, and the content after fmt byte-matches sample.out.ybm."
 
 [[case]]
 id = "check_diff_none_after_normalization"
@@ -79,7 +76,7 @@ stdout = { mode = "exact", value = "" }
 stderr = { mode = "exact", value = "" }
 doc_blocks = []
 requires_env = []
-notes = "sample.out.ybm is already canonical, so --check reports no diff and exits 0."
+notes = "sample.out.ybm is already canonical, so ybm check reports no diff and exits 0."
 
 [[case]]
 id = "check_on_normalized_form_is_noop"
@@ -95,4 +92,4 @@ stdout = { mode = "exact", value = "" }
 stderr = { mode = "exact", value = "" }
 doc_blocks = []
 requires_env = []
-notes = "Running check's in-place rewrite on sample.out.ybm also byte-matches itself (a direct verification of fmt(fmt(x)) = fmt(x))."
+notes = "Running ybm check --apply on sample.out.ybm also byte-matches itself (a direct verification of fmt(fmt(x)) = fmt(x))."

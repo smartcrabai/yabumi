@@ -31,7 +31,7 @@ samples/
     lint/        lint warnings only (E4000-E4999; type-checking itself passes)
     runtime/     runtime abnormal termination (panics, top-level `?` propagation; E6000-E6999)
     cli/         pre-launch CLI errors (file not found, invalid extension; E9000-E9999)
-  fmt/           fmt (formatting) verification. Before/after formatting pairs + `--check` diff verification
+  fmt/           fmt (formatting) verification. Read-only `ybm check` diff detection + `--apply` rewrite verification
   doctest/       samples dedicated to the `ybm test` doc-test mechanism
 ```
 
@@ -77,7 +77,7 @@ stdin_file = ""                    # relative path to a stdin fixture (empty inp
 exit_code = 0
 diagnostics = []                   # expected diagnostic codes, listed in the order corresponding to ascending file:line:col. Empty = no diagnostics
 fmt_diff_expected = false          # only meaningful when cmd = "check_diff"
-fmt_result_file = ""               # after cmd = "check" (in-place formatting), the file this result should byte-match
+fmt_result_file = ""               # after cmd = "check" (`--apply` rewrite), the file this result should byte-match
 stdout = { mode = "exact", value = "" }     # mode: exact | contains. Takes either value or file
 stderr = { mode = "exact", value = "" }
 doc_blocks = []                    # only for cmd = "test". [{ line = 12, result = "pass" }, { line = 20, result = "fail", code = "E6004" }, ...]
@@ -87,7 +87,7 @@ requires_env = []                  # array of environment variable names needed 
 notes = "a one-line human-readable explanation"
 ```
 
-- Mapping of `cmd`: `run` = `ybm <entry>` / `check` = `ybm check <entry>` (since this runs in-place fmt, the target is basically restricted to `ok/` samples that don't need reformatting) / `check_diff` = `ybm check <entry> --check` (diff detection for fmt only, no rewrite) / `test` = `ybm test <entry>`.
+- Mapping of `cmd`: `run` = `ybm <entry>` / `check` = `ybm check <entry> --apply` (explicit fmt rewrite; the default postfix form) / `check_diff` = `ybm check <entry>` (read-only fmt diff detection, no rewrite) / `test` = `ybm test <entry>`.
 - `diagnostics` is an array of string codes like `E1001`. Per D-CLI-03 (all diagnostics are collected and reported in ascending `file:line:col` order), when there are multiple, they are listed in that order.
 - Only `err/cli/` cases may set `entry` to a file name that doesn't actually exist in the directory (this is to verify E9001 = file not found; in this case the file itself is not provided).
 - `fmt/` directories set `entry` to `*.in.ybm` / `*.out.ybm` and use `fmt_diff_expected` / `fmt_result_file` (see the listing in §3.6).
@@ -189,7 +189,7 @@ The "Files" column in each table omits `expected.toml` (since it is required in 
 | `11-2_regex` | is_match/find/find_all/replace/replace_all/captures | `entry_main.ybm` | §11.2 |
 | `11-2_math` | checked_*/abs_*/min_*/max_*/floor/ceil/round/sqrt/pow/PI/E | `entry_main.ybm` | §11.2 |
 | `11-3_builtins_print_eprint_assert` | the 4-type overloads of print/eprint; stdout/stderr separation | `entry_main.ybm` | §11.3 |
-| `12_fmt_lint_clean_baseline` | a positive-contrast example where an already-formatted, lint-clean file exits 0 under both `check` and `check --check` | `entry_main.ybm` | §12 |
+| `12_fmt_lint_clean_baseline` | a positive-contrast example where an already-formatted, lint-clean file exits 0 under both `check` and `check --apply` | `entry_main.ybm` | §12 |
 | `14_memory_model_value_semantics` | value copying; `var self` as the sole mutation-propagation path; closure value capture | `entry_main.ybm` | §14 |
 | `15_end_to_end_showcase` | an adaptation of the SPEC §15 sample (pattern 3) | `mod_repo.ybm`, `entry_showcase_typecheck_only.ybm`, `entry_showcase_runnable.ybm` | §15 |
 
@@ -258,8 +258,8 @@ The "Files" column in each table omits `expected.toml` (since it is required in 
 | `trailing_comma_normalization` | adding a trailing comma to multi-line literals/calls; removing it on a single line (D-TYPE-02) | `sample.in.ybm`, `sample.out.ybm` | §3.2 / §12 |
 | `collection_and_call_arg_line_splitting` | deciding "keep on one line vs. expand to one element per line" for list/dict/set/tuple literals and function-call argument lists, based solely on the syntactic signal of whether the input source has a line break (D-FMT-05); remaining idempotent after expansion (fmt after fmt = fmt) | `sample.in.ybm`, `sample.out.ybm` | §3.2 / §12 |
 | `method_chain_continuation_indent` | normalizing parenthesis-less line continuation to the base line + 4 (D-SYN-05) | `sample.in.ybm`, `sample.out.ybm` | §6.2 / §12 |
-| `idempotency_full_program_and_check_flag_position` | verifying fmt-after-fmt = fmt idempotency in a practical sample involving multiple rules, and the `--check` flag position (equivalent whether given before or after, D-CLI-02) | `sample.in.ybm`, `sample.out.ybm` | §1 / §12 (overall) |
-| `doc_comment_fence_unaffected` | code inside a language-tag-less fence block within a `##` doc comment is exempt from fmt (the in-place rewrite by `ybm check`), and is preserved byte-identical in its non-canonical form even after formatting (D-FMT-06). Contrasted with ordinary code outside the fence, which is formatted normally in the same `check` run | `sample.in.ybm`, `sample.out.ybm` | §12 / §13 |
+| `idempotency_full_program_and_check_flag_position` | verifying fmt-after-fmt = fmt idempotency in a practical sample involving multiple rules, and the `--apply` flag position (equivalent whether given before or after, D-CLI-02) | `sample.in.ybm`, `sample.out.ybm` | §1 / §12 (overall) |
+| `doc_comment_fence_unaffected` | code inside a language-tag-less fence block within a `##` doc comment is exempt from fmt (the in-place rewrite by `ybm check --apply`), and is preserved byte-identical in its non-canonical form even after formatting (D-FMT-06). Contrasted with ordinary code outside the fence, which is formatted normally in the same `check` run | `sample.in.ybm`, `sample.out.ybm` | §12 / §13 |
 
 ### 3.7 `samples/doctest/` (doc-test mechanism, 6 directories)
 
@@ -325,5 +325,5 @@ Lists every subsection of SPEC §1-§15 in the left column, with its correspondi
 1. **Runtime execution verification of `net`/`proc` depends on the mock entities existing**: under the policy in §1.4/1.4.1/1.4.2, `http`/`proc`-related samples are verified through to execution (`run`), but this presupposes that the Rust-side test harness provides entities matching this document's contract tables (the mock HTTP server's endpoint list, the `YABUMI_TEST_PROC_BIN` fixture's argument spec). While the harness-side implementation is not yet started, or is inconsistent with the contract, the harness will skip cases with `requires_env`, effectively regressing coverage to the equivalent of type/effect checking (`ybm check`). Also, since `proc.run` has no API for supplying stdin to the child process, verification of the `cat` subcommand is limited to "behavior with empty/closed stdin" (§1.4.2).
 2. **The genuinely non-deterministic path of `time.now()`/`rand` (non-degenerate ranges) is not verified**: no sample is designed to actively confirm that `rand.int`/`rand.float`/`rand.bool` (when not using a degenerate range) or `time.now()` produce "the right type, but a different value every time" (determinism was prioritized instead). Statistical tests that verify value distributions or non-determinism itself are out of scope.
 3. **There is no sample confirming that syntax unsupported in v1, such as match guards or OR patterns, is indeed unsupported**: features explicitly marked as non-goals in D-SYN-06 (guarded patterns, OR patterns) are not covered by a sample confirming "writing this produces a syntax error." If needed, this can be absorbed by adding extra entries to `err/static/2_syntax_errors` (extendable within the current directory structure as-is).
-4. **In cases involving `ybm check` (fmt in-place), formatting could unintentionally affect the run result**: samples using `cmd = "check"` in `expected.toml` actually undergo fmt's in-place rewrite. On the `ok/` side, it is necessary to strictly follow the operating rule of preparing source that needs no reformatting (or whose meaning is unchanged after reformatting); this is spelled out in this document's convention (§1.3), but remains a risk of oversight during the implementation phase.
+4. **In cases involving `ybm check --apply` (fmt in-place), formatting could unintentionally affect the run result**: samples using `cmd = "check"` in `expected.toml` actually invoke the explicit `--apply` rewrite. On the `ok/` side, it is necessary to strictly follow the operating rule of preparing source that needs no reformatting (or whose meaning is unchanged after reformatting); this is spelled out in this document's convention (§1.3), but remains a risk of oversight during the implementation phase.
 5. **Diagnostic-code coverage is 100% against the settled table in D-DIAG-02, but future codes not listed in D-DIAG-02 (e.g. post-v1 extensions) are naturally out of scope.** This document's coverage matrix is a snapshot as of the current SPEC/DECISIONS; if either document is updated, this document and the directory listing under `err/static` must be kept in sync with it.

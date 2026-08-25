@@ -4,7 +4,7 @@
 # through 06 rule, and a positive-control sample confirming it contains none of unused
 # variable (E4001), unused function (E4002), shadowing (E4003), unreachable code
 # (E4004), or a naming-convention violation (E4005).
-# Verifies that both `ybm check` and `ybm check <file> --check` (D-CLI-02) report no
+# Verifies that both `ybm check` and `ybm check --apply <file>` (D-CLI-02) report no
 # diff, no diagnostics, and exit 0: here, the state itself of "needing no formatting
 # whatsoever" is shown as the positive control.
 
