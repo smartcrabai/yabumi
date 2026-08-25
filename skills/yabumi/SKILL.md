@@ -42,12 +42,13 @@ Use `ybm` from `PATH`. In a Yabumi source checkout, use `target/release/ybm`, th
 
 For every changed entry:
 
-1. Run `ybm check path/to/script.ybm`. It type-checks, formats in place, checks doc-test blocks, and lints.
-2. Fix every diagnostic and rerun the same command.
-3. Run `ybm test path/to/script.ybm` when it contains doc tests.
-4. Run `ybm path/to/script.ybm` with representative input when effects are safe and authorized.
+1. Run `ybm check path/to/script.ybm`. It type-checks, checks fmt without writing, checks doc-test blocks, and lints.
+2. If the only failure is a fmt diff and rewriting is authorized, run `ybm check --apply path/to/script.ybm`, then rerun the read-only `ybm check`.
+3. Fix every diagnostic and rerun the same command.
+4. Run `ybm test path/to/script.ybm` when it contains doc tests.
+5. Run `ybm path/to/script.ybm` with representative input when effects are safe and authorized.
 
-Use `ybm check --check` only for non-mutating CI verification. Diagnostics have the stable format `file:line:col [E0000] message`.
+`ybm check --apply` is the only check-mode command that rewrites fmt. Diagnostics have the stable format `file:line:col [E0000] message`.
 
 ## Delivery
 

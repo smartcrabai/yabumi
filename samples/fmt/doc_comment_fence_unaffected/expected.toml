@@ -1,6 +1,6 @@
 # Verifies: SPEC §12/§13, DECISIONS D-FMT-06
 # Confirms that the content of an untagged fenced block (the part enclosed in ```)
-# inside a `##` doc comment is exempt from fmt (in-place rewriting by `ybm check`) and
+# inside a `##` doc comment is exempt from fmt (in-place rewriting by `ybm check --apply`) and
 # is preserved byte-identical in its non-canonical form (spacing-rule violations such as
 # `x=1+2` / `assert(x==3)`). Ordinary code outside the fence (def/return/assignment/
 # assert) is formatted normally per D-FMT-01 in the same check run.
@@ -19,7 +19,7 @@ stdout = { mode = "exact", value = "" }
 stderr = { mode = "exact", value = "" }
 doc_blocks = []
 requires_env = []
-notes = "ybm check sample.in.ybm. Type-checking (including doc-test-block type-checking, D-DOC/§13) and the effect check succeed. The content after in-place fmt byte-matches sample.out.ybm. `x=1+2`/`assert(x==3)` inside the fence are preserved as-is from the source (non-canonical form); only the `add`/`result`/`assert` calls outside the fence are formatted per D-FMT-01 (D-FMT-06). Since check never executes, stdout/stderr are empty."
+notes = "ybm check --apply sample.in.ybm. Type-checking (including doc-test-block type-checking, D-DOC/§13) and the effect check succeed. The content after in-place fmt byte-matches sample.out.ybm. `x=1+2`/`assert(x==3)` inside the fence are preserved as-is from the source (non-canonical form); only the `add`/`result`/`assert` calls outside the fence are formatted per D-FMT-01 (D-FMT-06). Since check never executes, stdout/stderr are empty."
 
 [[case]]
 id = "check_diff_reports_diff_from_outer_code_only"
@@ -35,7 +35,7 @@ stdout = { mode = "contains", value = "" }
 stderr = { mode = "exact", value = "" }
 doc_blocks = []
 requires_env = []
-notes = "ybm check sample.in.ybm --check. Since the ordinary-code part (def add, etc.) is in non-canonical form, there is a diff, and it exits 1 with no rewrite. Since stdout's diff-display format is unspecified by SPEC/DECISIONS, this uses mode=contains value=\"\" (not asserting the content)."
+notes = "ybm check sample.in.ybm. Since the ordinary-code part (def add, etc.) is in non-canonical form, there is a diff, and it exits 1 with no rewrite. Since stdout's diff-display format is unspecified by SPEC/DECISIONS, this uses mode=contains value=\"\" (not asserting the content)."
 
 [[case]]
 id = "check_diff_none_after_normalization"
@@ -51,7 +51,7 @@ stdout = { mode = "exact", value = "" }
 stderr = { mode = "exact", value = "" }
 doc_blocks = []
 requires_env = []
-notes = "In sample.out.ybm the ordinary code is already canonical, and the fence content remains non-canonical as originally, so no further diff arises (fmt doesn't evaluate fence content, so --check reports no diff and exits 0). Confirms fmt(fmt(x)) = fmt(x)."
+notes = "In sample.out.ybm the ordinary code is already canonical, and the fence content remains non-canonical as originally, so no further diff arises (fmt doesn't evaluate fence content, so ybm check reports no diff and exits 0). Confirms fmt(fmt(x)) = fmt(x)."
 
 [[case]]
 id = "check_on_normalized_form_is_noop"
@@ -67,4 +67,4 @@ stdout = { mode = "exact", value = "" }
 stderr = { mode = "exact", value = "" }
 doc_blocks = []
 requires_env = []
-notes = "Running check's in-place rewrite on sample.out.ybm also byte-matches itself (idempotent, fence non-canonical form included)."
+notes = "Running ybm check --apply on sample.out.ybm also byte-matches itself (idempotent, fence non-canonical form included)."

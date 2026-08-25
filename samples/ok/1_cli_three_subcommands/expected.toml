@@ -1,4 +1,4 @@
-# SPEC §1 (CLI): confirms that the 4 subcommands run/check/check --check/test all
+# SPEC §1 (CLI): confirms that the 4 subcommand patterns run/check/check --apply/test all
 # complete with exit 0 and no diagnostics against the same file.
 
 [[case]]
@@ -21,6 +21,22 @@ notes = "Runs after type-checking succeeds, and every assert succeeds (stdout/st
 id = "check_ok"
 entry = "entry_main.ybm"
 cmd = "check"
+args = ["--apply"]
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "exact", value = "" }
+stderr = { mode = "exact", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Type-checking (including doc-test-block type-checking, never running) + fmt (in-place) + lint all pass. The explicit ybm check --apply invocation requests the in-place rewrite; the source is already canonical, so it makes no change."
+
+[[case]]
+id = "check_diff_ok"
+entry = "entry_main.ybm"
+cmd = "check_diff"
 args = []
 stdin_file = ""
 exit_code = 0
@@ -31,23 +47,7 @@ stdout = { mode = "exact", value = "" }
 stderr = { mode = "exact", value = "" }
 doc_blocks = []
 requires_env = []
-notes = "Type-checking (including doc-test-block type-checking, never running) + fmt (in-place) + lint all pass. Since the source is already in fmt-canonical form, the in-place rewrite makes no change."
-
-[[case]]
-id = "check_diff_ok"
-entry = "entry_main.ybm"
-cmd = "check_diff"
-args = ["--check"]
-stdin_file = ""
-exit_code = 0
-diagnostics = []
-fmt_diff_expected = false
-fmt_result_file = ""
-stdout = { mode = "exact", value = "" }
-stderr = { mode = "exact", value = "" }
-doc_blocks = []
-requires_env = []
-notes = "Equivalent to ybm check entry_main.ybm --check. Since the source is fmt-canonical, there is no diff (D-CLI-02: --check is synonymous whether placed before or after the file)."
+notes = "Equivalent to ybm check entry_main.ybm. Since the source is fmt-canonical, there is no diff (D-CLI-02: check is read-only by default)."
 
 [[case]]
 id = "test_ok"

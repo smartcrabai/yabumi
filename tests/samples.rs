@@ -71,7 +71,7 @@ fn run_all_samples() {
 #[test]
 fn cli_usage_errors_exit_nonzero_on_stderr() {
     let ybm_bin = env!("CARGO_BIN_EXE_ybm");
-    for args in [Vec::<&str>::new(), vec!["check", "--check"], vec!["test"]] {
+    for args in [Vec::<&str>::new(), vec!["check", "--apply"], vec!["test"]] {
         let output = Command::new(ybm_bin)
             .args(&args)
             .output()
@@ -94,8 +94,8 @@ fn cli_usage_errors_exit_nonzero_on_stderr() {
 /// Converts one `expected.toml` case into an actual `ybm` process invocation and verifies it
 /// (ARCHITECTURE.md §6.1, `SAMPLES_PLAN.md` §1.3/§1.4).
 ///
-/// `cmd = "check"` rewrites the file in place via fmt, so rather than using `dir` directly, it
-/// runs from a copy of the whole thing made in a temp directory (including `_out/` — an fs
+/// `cmd = "check"` rewrites the file in place via `--apply`, so rather than using `dir` directly,
+/// it runs from a copy of the whole thing made in a temp directory (including `_out/` — an fs
 /// sample's sandbox is also rewritten on the copy side, leaving `samples/` itself untouched).
 fn run_case(
     ybm_bin: &Path,
@@ -158,7 +158,7 @@ fn run_case(
         }
         let after_check = snapshot_ybm_files(work_dir_path)?;
         if before_check.as_ref() != Some(&after_check) {
-            return Err("check --check modified one or more .ybm files".to_owned());
+            return Err("read-only check modified one or more .ybm files".to_owned());
         }
     }
 
@@ -194,7 +194,7 @@ fn missing_required_env(case: &ExpectedCase, _http_base: &str) -> Option<String>
 }
 
 /// Copies the whole contents of `dir` into a temp directory (protecting `samples/` itself from
-/// `check`'s in-place rewrite and from `fs` samples' writes under `_out/`, `SAMPLES_PLAN.md`
+/// `ybm check --apply`'s in-place rewrite and from `fs` samples' writes under `_out/`, `SAMPLES_PLAN.md`
 /// §1.4).
 fn copy_dir_to_temp(dir: &Path) -> Result<tempdir_shim::TempDir, String> {
     let work = tempdir_shim::TempDir::new()
@@ -266,16 +266,18 @@ fn snapshot_ybm_files(root: &Path) -> Result<Vec<(PathBuf, Vec<u8>)>, String> {
 /// the mapping table in `SAMPLES_PLAN.md` §6.1.
 fn build_command(ybm_bin: &Path, work_dir: &Path, case: &ExpectedCase) -> Result<Command, String> {
     let entry_arg = case.entry.clone();
+    if case.cmd == "check_diff" && case.args.iter().any(|a| a == "--apply") {
+        return Err("cmd = \"check_diff\" cannot include --apply".to_owned());
+    }
 
-    // D-CLI-02: `--check` may go either before or after entry. `cmd = "check_diff"`'s default
-    // form places it after (`ybm check <entry> --check`). Only when `case.args` explicitly
-    // spells out `--check` is it invoked in the prefix form (`ybm check --check <entry>`)
-    // (`SAMPLES_PLAN.md` §6.1: "use `case.args` as-is for the actual flag position").
-    let has_prefix_check_flag = case.args.iter().any(|a| a == "--check");
+    // D-CLI-02: `--apply` may go either before or after entry. `cmd = "check"` defaults to the
+    // postfix form (`ybm check <entry> --apply`). When `case.args` explicitly spells out
+    // `--apply`, it is invoked in the prefix form (`ybm check --apply <entry>`).
+    let has_prefix_apply_flag = case.cmd == "check" && case.args.iter().any(|a| a == "--apply");
     let extra_args: Vec<String> = case
         .args
         .iter()
-        .filter(|a| a.as_str() != "--check")
+        .filter(|a| !(case.cmd == "check" && a.as_str() == "--apply"))
         .cloned()
         .collect();
 
@@ -285,18 +287,18 @@ fn build_command(ybm_bin: &Path, work_dir: &Path, case: &ExpectedCase) -> Result
             a.extend(extra_args);
             a
         }
-        "check" => {
-            let mut a = vec!["check".to_string(), entry_arg];
+        "check" if has_prefix_apply_flag => {
+            let mut a = vec!["check".to_string(), "--apply".to_string(), entry_arg];
             a.extend(extra_args);
             a
         }
-        "check_diff" if has_prefix_check_flag => {
-            let mut a = vec!["check".to_string(), "--check".to_string(), entry_arg];
+        "check" => {
+            let mut a = vec!["check".to_string(), entry_arg, "--apply".to_string()];
             a.extend(extra_args);
             a
         }
         "check_diff" => {
-            let mut a = vec!["check".to_string(), entry_arg, "--check".to_string()];
+            let mut a = vec!["check".to_string(), entry_arg];
             a.extend(extra_args);
             a
         }
@@ -728,8 +730,20 @@ mod tests {
     }
 
     #[test]
-    fn build_command_check_prepends_check_subcommand() {
+    fn build_command_check_applies_fmt() {
         let c = case(|c| c.cmd = "check".to_string());
+        let cmd = build_command(Path::new("/bin/ybm"), Path::new("/work"), &c)
+            .unwrap_or_else(|e| panic!("build_command failed: {e}"));
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(args, vec!["check", "entry_main.ybm", "--apply"]);
+    }
+
+    #[test]
+    fn build_command_check_diff_defaults_to_read_only_check() {
+        let c = case(|c| c.cmd = "check_diff".to_string());
         let cmd = build_command(Path::new("/bin/ybm"), Path::new("/work"), &c)
             .unwrap_or_else(|e| panic!("build_command failed: {e}"));
         let args: Vec<String> = cmd
@@ -738,26 +752,25 @@ mod tests {
             .collect();
         assert_eq!(args, vec!["check", "entry_main.ybm"]);
     }
-
     #[test]
-    fn build_command_check_diff_defaults_to_suffix_check_flag() {
-        let c = case(|c| c.cmd = "check_diff".to_string());
-        let cmd = build_command(Path::new("/bin/ybm"), Path::new("/work"), &c)
-            .unwrap_or_else(|e| panic!("build_command failed: {e}"));
-        let args: Vec<String> = cmd
-            .get_args()
-            .map(|a| a.to_string_lossy().into_owned())
-            .collect();
-        assert_eq!(args, vec!["check", "entry_main.ybm", "--check"]);
+    fn build_command_check_diff_rejects_apply_flag() {
+        let c = case(|c| {
+            c.cmd = "check_diff".to_string();
+            c.args = vec!["--apply".to_string()];
+        });
+        match build_command(Path::new("/bin/ybm"), Path::new("/work"), &c) {
+            Ok(_) => panic!("check_diff must remain read-only"),
+            Err(err) => assert!(err.contains("cannot include --apply")),
+        }
     }
 
     #[test]
-    fn build_command_check_diff_honors_explicit_prefix_flag_position() {
-        // D-CLI-02: --check may go either before or after file. When case.args spells it out
-        // explicitly, it is invoked in the prefix form (SAMPLES_PLAN.md §6.1).
+    fn build_command_check_honors_explicit_prefix_apply_flag() {
+        // D-CLI-02: --apply may go either before or after file. When case.args spells it out
+        // explicitly, it is invoked in the prefix form (SAMPLES_PLAN.md §1.3).
         let c = case(|c| {
-            c.cmd = "check_diff".to_string();
-            c.args = vec!["--check".to_string()];
+            c.cmd = "check".to_string();
+            c.args = vec!["--apply".to_string()];
         });
         let cmd = build_command(Path::new("/bin/ybm"), Path::new("/work"), &c)
             .unwrap_or_else(|e| panic!("build_command failed: {e}"));
@@ -765,7 +778,7 @@ mod tests {
             .get_args()
             .map(|a| a.to_string_lossy().into_owned())
             .collect();
-        assert_eq!(args, vec!["check", "--check", "entry_main.ybm"]);
+        assert_eq!(args, vec!["check", "--apply", "entry_main.ybm"]);
     }
 
     #[test]

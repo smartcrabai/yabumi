@@ -19,7 +19,7 @@ stdout = { mode = "contains", value = "" }
 stderr = { mode = "contains", value = "" }
 doc_blocks = []
 requires_env = []
-notes = "ybm check's in-place formatting result byte-matches sample.out.ybm (D-FMT-01). Zero type/lint diagnostics. Since the CLI's exact stdout wording is unspecified by SPEC/DECISIONS, stdout/stderr are handled loosely as contains \"\" (unconditionally true), and only exit_code / fmt_result_file are strictly verified."
+notes = "ybm check --apply's in-place formatting result byte-matches sample.out.ybm (D-FMT-01). Zero type/lint diagnostics. Since the CLI's exact stdout wording is unspecified by SPEC/DECISIONS, stdout/stderr are handled loosely as contains \"\" (unconditionally true), and only exit_code / fmt_result_file are strictly verified."
 
 [[case]]
 id = "check_diff_detects_nonstandard_spacing"
@@ -35,7 +35,7 @@ stdout = { mode = "contains", value = "" }
 stderr = { mode = "contains", value = "" }
 doc_blocks = []
 requires_env = []
-notes = "ybm check --check judges the non-canonical form as having a diff and exits 1 (D-CLI-02). No rewrite happens."
+notes = "ybm check judges the non-canonical form as having a diff and exits 1 (D-CLI-02). No rewrite happens."
 
 [[case]]
 id = "check_diff_idempotent_on_canonical_form"

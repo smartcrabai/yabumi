@@ -725,7 +725,7 @@ mod tests {
     }
 
     /// Reproduces the doc-fence portion of `ybm check` (type-checking only, no execution,
-    /// SPEC §13/§1). fmt's in-place write / `--check` diff check is fmt's own responsibility
+    /// SPEC §13/§1). fmt's read-only diff / `--apply` write is the driver's responsibility
     /// and out of this test's scope — `check_vs_test_command_difference`'s main point is
     /// confirming that "check does not execute, and so cannot detect runtime
     /// inconsistencies" (see the comment at the top of entry_main.ybm), and it does not

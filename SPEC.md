@@ -14,11 +14,11 @@ Agent Skills(SKILL.md 同梱スクリプト)向けの単一ファイル完結ス
 | コマンド | 動作 |
 |---|---|
 | `ybm <file>` | 型チェック実行後、成功時のみ実行 |
-| `ybm check <file>` | 型チェック + fmt(in-place 書き換え)+ lint。docテストブロックの型チェックも行う(実行はしない) |
+| `ybm check <file>` | 型チェック + fmt差分確認(書き換えなし)+ lint。docテストブロックの型チェックも行う(実行はしない) |
 | `ybm test <file>` | docテストを実行 |
 
-- `ybm check --check`: fmt を書き換えず、差分があれば exit 1(CI 用)
-- exit code: 成功 = 0。型エラー・lint 警告・fmt 差分(--check 時)・テスト失敗・実行時 Err 終了 = 1
+- `ybm check --apply <file>`: fmtを書き換える。`--apply` なしではfmtを書き換えず、差分を表示する
+- exit code: 成功 = 0。型エラー・lint 警告・fmt 差分(デフォルトcheck時)・テスト失敗・実行時 Err 終了 = 1
 - 診断形式: `file:line:col [E0000] message`。エラーコードは安定(機械可読)
 
 ## 2. 字句
@@ -286,7 +286,7 @@ http server / sqlite / crypto は対象外。
 
 ## 12. fmt / lint
 
-- fmt: `ybm check` で in-place 書き換え(gofmt 流)。冪等(fmt∘fmt = fmt)
+- fmt: `ybm check --apply` で in-place 書き換え(gofmt 流)。`ybm check` は差分確認のみ。冪等(fmt∘fmt = fmt)
 - lint ルール: 未使用変数 / 未使用関数 / シャドーイング / 到達不能コード / 命名規約(snake_case 変数・関数、PascalCase 型)
 - lint 警告ありも exit 1(「check が通る = 綺麗」の単純規範)
 

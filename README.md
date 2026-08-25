@@ -49,14 +49,14 @@ There are only three subcommands.
 | Command | Behavior | Main exit codes |
 |---|---|---|
 | `ybm <file>` | Type-checks, then runs only on success | 0 = success / 1 = type error or runtime `Err` termination |
-| `ybm check <file>` | Type-check + fmt (in-place rewrite) + lint. Also type-checks doc-test blocks (without running them) | 0 = success / 1 = type error or lint warning |
+| `ybm check <file>` | Type-check + read-only fmt diff check + lint. Also type-checks doc-test blocks (without running them) | 0 = clean / 1 = fmt diff, type error, or lint warning |
 | `ybm test <file>` | Runs doc tests | 0 = all pass / 1 = type error or doc-test failure |
 
-- `ybm check --check`: does not rewrite fmt in place; exits 1 if there is a diff (for CI)
+- `ybm check --apply <file>`: rewrites fmt in place; exits 1 if type-check or lint fails
 - Diagnostic format: `file:line:col [E0000] message`. Error codes are stable and machine-readable
 
 ```sh
-$ ybm check --check samples/err/static/4_mutability_errors/entry_reassign_immutable.ybm
+$ ybm check samples/err/static/4_mutability_errors/entry_reassign_immutable.ybm
 samples/err/static/4_mutability_errors/entry_reassign_immutable.ybm:5:1 [E3001] 'x' cannot be reassigned because it is not a var binding (D-MUT-01-03)
 $ echo $?
 1
@@ -88,8 +88,8 @@ print(x)
 ```
 
 ```
-$ ybm check --check entry_reassign_immutable.ybm
-entry_reassign_immutable.ybm:5:1 [E3001] 'x' cannot be reassigned because it is not a var binding (D-MUT-01-03)
+$ ybm check samples/err/static/4_mutability_errors/entry_reassign_immutable.ybm
+samples/err/static/4_mutability_errors/entry_reassign_immutable.ybm:5:1 [E3001] 'x' cannot be reassigned because it is not a var binding (D-MUT-01-03)
 ```
 
 ### Effect System

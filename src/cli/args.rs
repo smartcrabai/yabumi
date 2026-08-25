@@ -1,5 +1,5 @@
-//! Hand-written argv parsing (3 subcommands + `--check`, position-independent, ARCHITECTURE.md §2.1).
-//! Does not use `clap` (only 3 subcommands and a single `--check` flag, ARCHITECTURE.md §1.6).
+//! Hand-written argv parsing (3 subcommands + `--apply`, position-independent, ARCHITECTURE.md §2.1).
+//! Does not use `clap` (only 3 subcommands and a single `--apply` flag, ARCHITECTURE.md §1.6).
 
 use std::path::PathBuf;
 
@@ -7,8 +7,8 @@ use std::path::PathBuf;
 pub enum Subcommand {
     /// `ybm <file>`.
     Run { file: PathBuf },
-    /// `ybm check <file> [--check]`. D-CLI-02: `--check` means the same regardless of flag position.
-    Check { file: PathBuf, check_only: bool },
+    /// `ybm check <file> [--apply]`. D-CLI-02: `--apply` means fmt writes; absence means fmt check.
+    Check { file: PathBuf, apply_fmt: bool },
     /// `ybm test <file>`.
     Test { file: PathBuf },
 }
@@ -22,9 +22,9 @@ pub enum CliError {
 /// Builds a `Subcommand` from a string sequence equivalent to `std::env::args()` (excluding the
 /// leading executable name).
 ///
-/// - If `argv[0]` is `"check"`/`"test"`, treat it as that subcommand and read `--check`
-///   (check only, D-CLI-02: either position is allowed) and the file path (the first
-///   non-`--check` token) from the rest.
+/// - If `argv[0]` is `"check"`/`"test"`, treat it as that subcommand and read `--apply`
+///   (fmt write, D-CLI-02: either position is allowed) and the file path (the first
+///   non-`--apply` token) from the rest.
 /// - Otherwise (`argv[0]` is neither `"check"` nor `"test"`), treat it as `ybm <file>` (Run),
 ///   using `argv[0]` as the file path.
 ///
@@ -34,7 +34,7 @@ pub enum CliError {
 /// rather than going through this function's result (`Subcommand`), so this function has no
 /// need to collect or retain them and simply ignores them (judgment call made in this file).
 pub fn parse_args(argv: &[String]) -> Result<Subcommand, CliError> {
-    const USAGE: &str = "usage: ybm <file> | ybm check <file> [--check] | ybm test <file>";
+    const USAGE: &str = "usage: ybm <file> | ybm check <file> [--apply] | ybm test <file>";
 
     let Some(first) = argv.first() else {
         return Err(CliError::Usage(USAGE.to_owned()));
@@ -42,11 +42,11 @@ pub fn parse_args(argv: &[String]) -> Result<Subcommand, CliError> {
 
     match first.as_str() {
         "check" => {
-            let mut check_only = false;
+            let mut apply_fmt = false;
             let mut file: Option<PathBuf> = None;
             for arg in &argv[1..] {
-                if arg == "--check" {
-                    check_only = true;
+                if arg == "--apply" {
+                    apply_fmt = true;
                 } else if file.is_none() {
                     file = Some(PathBuf::from(arg));
                 }
@@ -54,9 +54,9 @@ pub fn parse_args(argv: &[String]) -> Result<Subcommand, CliError> {
                 // itself (see note above).
             }
             let file = file.ok_or_else(|| {
-                CliError::Usage("ybm check <file> [--check]: no file path was specified".to_owned())
+                CliError::Usage("ybm check <file> [--apply]: no file path was specified".to_owned())
             })?;
-            Ok(Subcommand::Check { file, check_only })
+            Ok(Subcommand::Check { file, apply_fmt })
         }
         "test" => {
             let file = argv.get(1).map(PathBuf::from).ok_or_else(|| {
@@ -104,41 +104,41 @@ mod tests {
     fn check_without_flag() {
         let argv = vec!["check".to_owned(), "entry_main.ybm".to_owned()];
         match parse_args(&argv) {
-            Ok(Subcommand::Check { file, check_only }) => {
+            Ok(Subcommand::Check { file, apply_fmt }) => {
                 assert_eq!(path_str(&file), "entry_main.ybm");
-                assert!(!check_only);
+                assert!(!apply_fmt);
             }
             other => panic!("expected Check, got {other:?}"),
         }
     }
 
     #[test]
-    fn check_flag_after_file() {
+    fn check_apply_flag_after_file() {
         let argv = vec![
             "check".to_owned(),
             "entry_main.ybm".to_owned(),
-            "--check".to_owned(),
+            "--apply".to_owned(),
         ];
         match parse_args(&argv) {
-            Ok(Subcommand::Check { file, check_only }) => {
+            Ok(Subcommand::Check { file, apply_fmt }) => {
                 assert_eq!(path_str(&file), "entry_main.ybm");
-                assert!(check_only);
+                assert!(apply_fmt);
             }
             other => panic!("expected Check, got {other:?}"),
         }
     }
 
     #[test]
-    fn check_flag_before_file() {
+    fn check_apply_flag_before_file() {
         let argv = vec![
             "check".to_owned(),
-            "--check".to_owned(),
+            "--apply".to_owned(),
             "entry_main.ybm".to_owned(),
         ];
         match parse_args(&argv) {
-            Ok(Subcommand::Check { file, check_only }) => {
+            Ok(Subcommand::Check { file, apply_fmt }) => {
                 assert_eq!(path_str(&file), "entry_main.ybm");
-                assert!(check_only);
+                assert!(apply_fmt);
             }
             other => panic!("expected Check, got {other:?}"),
         }
@@ -161,7 +161,7 @@ mod tests {
 
     #[test]
     fn check_without_file_is_usage_error() {
-        let argv = vec!["check".to_owned(), "--check".to_owned()];
+        let argv = vec!["check".to_owned(), "--apply".to_owned()];
         assert!(matches!(parse_args(&argv), Err(CliError::Usage(_))));
     }
 
