@@ -37,6 +37,7 @@ pub fn check_stmt(
                 name,
                 ty.as_ref(),
                 value,
+                stmt.span,
                 ret_ctx,
                 env,
                 program,
@@ -125,6 +126,7 @@ fn check_var_decl(
     name: &Arc<str>,
     ty: Option<&crate::ast::TypeAnn>,
     value: &Expr,
+    stmt_span: Span,
     ret_ctx: Option<&Ty>,
     env: &mut TypeEnv,
     program: &mut Program,
@@ -154,7 +156,7 @@ fn check_var_decl(
         }
         None => value_ty,
     };
-    env.bind(Arc::clone(name), final_ty, true);
+    env.bind(Arc::clone(name), final_ty, true, stmt_span);
 }
 
 #[expect(
@@ -237,7 +239,7 @@ fn check_name_assign(
                 }
                 None => value_ty,
             };
-            env.bind(Arc::clone(name), final_ty, false);
+            env.bind(Arc::clone(name), final_ty, false, stmt_span);
         }
     }
 }

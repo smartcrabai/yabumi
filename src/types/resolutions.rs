@@ -20,6 +20,8 @@ pub struct Resolutions {
     /// Whether a `Call`'s callee is a struct construction / enum variant construction /
     /// ordinary call (the resolution result of the unified `Call` representation described in §3.4).
     pub call_kind: HashMap<NodeId, CallKind>,
+    /// Source span of the declaration resolved for each identifier expression.
+    pub ident_def: HashMap<NodeId, crate::diagnostics::Span>,
     /// The determined type of each expression (eval generally does not consult `Ty`, but some builtins such as decode need it).
     pub expr_ty: HashMap<NodeId, Ty>,
     /// D-TYPE-17 implicit-wrap decision for a `return` target expression. The key is the

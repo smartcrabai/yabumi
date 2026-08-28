@@ -8,7 +8,7 @@
 
 use super::value::Value;
 use crate::ast::{EnumDecl, FunctionDecl, StructDecl};
-use crate::diagnostics::SourceMap;
+use crate::diagnostics::{SourceMap, Span};
 use crate::types::Resolutions;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -160,6 +160,8 @@ pub struct Program {
     pub enums: HashMap<Arc<str>, Arc<EnumDecl>>,
     /// Per D-MOD-02, this holds only literals, so it is evaluated once, at load time.
     pub consts: HashMap<Arc<str>, Value>,
+    /// Source spans for module-level constants, keyed by their names.
+    pub const_spans: HashMap<Arc<str>, Span>,
     pub resolutions: Resolutions,
     /// All source files, finalized during the Lex phase. Needed so that even from deep
     /// inside a worker thread, a `SourceMap` can be reached in order to `Diagnostic::render`
@@ -179,6 +181,7 @@ impl Program {
             structs: HashMap::new(),
             enums: HashMap::new(),
             consts: HashMap::new(),
+            const_spans: HashMap::new(),
             resolutions: Resolutions::new(),
             sources,
             abort_process_on_par_panic: true,

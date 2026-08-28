@@ -78,7 +78,7 @@ mod tests {
     #[test]
     fn immutable_root_binding_reports_e3001() {
         let mut env = TypeEnv::root();
-        env.bind(Arc::from("x"), Ty::Int, false);
+        env.bind(Arc::from("x"), Ty::Int, false, dummy_span());
         let mut diagnostics = DiagnosticBag::new();
         check_mutable_place(&ident_expr("x"), &env, &mut diagnostics);
         let diags = diagnostics.into_vec();
@@ -89,7 +89,7 @@ mod tests {
     #[test]
     fn mutable_root_binding_is_allowed() {
         let mut env = TypeEnv::root();
-        env.bind(Arc::from("x"), Ty::Int, true);
+        env.bind(Arc::from("x"), Ty::Int, true, dummy_span());
         let mut diagnostics = DiagnosticBag::new();
         check_mutable_place(&ident_expr("x"), &env, &mut diagnostics);
         assert!(diagnostics.is_empty());
@@ -98,7 +98,7 @@ mod tests {
     #[test]
     fn nested_field_path_traces_back_to_root_variable() {
         let mut env = TypeEnv::root();
-        env.bind(Arc::from("u"), Ty::Int, false);
+        env.bind(Arc::from("u"), Ty::Int, false, dummy_span());
         let nested = Expr {
             id: NodeId(1),
             kind: ExprKind::FieldAccess {

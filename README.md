@@ -61,15 +61,17 @@ GitHub Release and shell installer, then updates the Homebrew tap.
 
 ## CLI
 
-There are only three subcommands.
+There are only four subcommands.
 
 | Command | Behavior | Main exit codes |
 |---|---|---|
 | `ybm <file>` | Type-checks, then runs only on success | 0 = success / 1 = type error or runtime `Err` termination |
 | `ybm check <file>` | Type-check + read-only fmt diff check + lint. Also type-checks doc-test blocks (without running them) | 0 = clean / 1 = fmt diff, type error, or lint warning |
 | `ybm test <file>` | Runs doc tests | 0 = all pass / 1 = type error or doc-test failure |
+| `ybm lsp` | Starts the Language Server Protocol server over stdio | 0 = clean shutdown or EOF / 1 = transport error or unclean exit |
 
 - `ybm check --apply <file>`: rewrites fmt in place; exits 1 if type-check or lint fails
+- `ybm lsp` takes no additional command-line arguments; see [`docs/LSP.md`](./docs/LSP.md) for protocol features and editor setup
 - Diagnostic format: `file:line:col [E0000] message`. Error codes are stable and machine-readable
 
 ```sh
@@ -188,8 +190,9 @@ doctest: 2 passed, 0 failed
 | [`docs/DECISIONS.md`](./docs/DECISIONS.md) | Record of decisions (decision IDs D-\*\*\*) resolving details left unspecified in the spec |
 | [`docs/STDLIB.md`](./docs/STDLIB.md) | Standard library (stdlib) reference |
 | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | Interpreter implementation design (module structure, pipeline, implementation history) |
+| [`docs/LSP.md`](./docs/LSP.md) | Language Server Protocol features and editor setup |
 | `samples/` | Sample collection that doubles as acceptance tests (`ok`/`err`/`fmt`/`doctest`, 89 directories, 254 files) |
-| `src/` | The implementation itself (lexer -> parser -> module_resolve -> type checking -> effect checking -> lint/fmt -> evaluator) |
+| `src/` | The implementation itself (lexer -> parser -> module_resolve -> type checking -> effect checking -> lint/fmt -> evaluator/LSP server) |
 
 ## Tests
 

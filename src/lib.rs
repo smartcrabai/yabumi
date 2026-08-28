@@ -28,6 +28,7 @@ mod eval;
 mod fmt;
 mod lexer;
 mod lint;
+mod lsp;
 mod module_resolve;
 mod parser;
 mod stdlib;

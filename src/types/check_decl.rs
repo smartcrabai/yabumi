@@ -1,7 +1,7 @@
 //! Type checking of declarations (def/struct/enum/const) (ARCHITECTURE.md §2.2).
 
 use crate::ast::{EnumDecl, FunctionDecl, Stmt, StmtKind, StructDecl};
-use crate::diagnostics::{Diagnostic, DiagnosticBag, ErrorCode};
+use crate::diagnostics::{Diagnostic, DiagnosticBag, ErrorCode, Span};
 use crate::eval::env::Program;
 use crate::types::check_stmt::{block_diverges, check_stmt};
 use crate::types::env::TypeEnv;
@@ -76,17 +76,14 @@ fn contains_void(ty: &Ty) -> bool {
 ///
 /// `extra_generics` is (for a method) the type parameters of the enclosing struct/enum
 /// declaration itself (D-FUNC-04, brought into scope alongside `decl.generics`).
-/// `self_info` is `Some((self_ty, mutable))` -- `self_ty` is
+/// `self_info` is `Some((self_ty, mutable, span))` -- `self_ty` is
 /// `Ty::Named{struct name, the struct's own TypeVar list}`, and `mutable` is whether it is
-/// `var self` (D-MUT-01). Both are empty/`None` for a top-level function.
-#[expect(
-    clippy::too_many_lines,
-    reason = "function declaration checking keeps one shared environment and return context"
-)]
+/// `var self` (D-MUT-01). `span` points to the self parameter. Both are empty/`None` for a
+/// top-level function.
 pub fn check_function_decl(
     decl: &FunctionDecl,
     extra_generics: &[Arc<str>],
-    self_info: Option<(&Ty, bool)>,
+    self_info: Option<(&Ty, bool, Span)>,
     program: &mut Program,
     diagnostics: &mut DiagnosticBag,
 ) {
@@ -96,8 +93,8 @@ pub fn check_function_decl(
         .chain(decl.generics.iter().cloned())
         .collect();
     let mut env = TypeEnv::for_function(combined_generics.clone());
-    if let Some((self_ty, mutable)) = self_info {
-        env.bind(Arc::from("self"), self_ty.clone(), mutable);
+    if let Some((self_ty, mutable, self_span)) = self_info {
+        env.bind(Arc::from("self"), self_ty.clone(), mutable, self_span);
     }
     for parameter in &decl.params {
         match ty_from_ann(&parameter.ty, &combined_generics, program) {
@@ -107,9 +104,14 @@ pub fn check_function_decl(
                     span: parameter.span,
                     message: "void cannot appear in a parameter type".to_owned(),
                 });
-                env.bind(Arc::clone(&parameter.name), Ty::Unknown, false);
+                env.bind(
+                    Arc::clone(&parameter.name),
+                    Ty::Unknown,
+                    false,
+                    parameter.span,
+                );
             }
-            Some(ty) => env.bind(Arc::clone(&parameter.name), ty, false),
+            Some(ty) => env.bind(Arc::clone(&parameter.name), ty, false, parameter.span),
             None => {
                 diagnostics.push(Diagnostic {
                     code: ErrorCode::MissingParamAnnotation,
@@ -119,7 +121,12 @@ pub fn check_function_decl(
                         parameter.name
                     ),
                 });
-                env.bind(Arc::clone(&parameter.name), Ty::Unknown, false);
+                env.bind(
+                    Arc::clone(&parameter.name),
+                    Ty::Unknown,
+                    false,
+                    parameter.span,
+                );
             }
         }
     }
@@ -134,7 +141,7 @@ pub fn check_function_decl(
     }
     let mut effects = EffectSet::empty();
 
-    if block_diverges(&decl.body) {
+    if block_diverges(&decl.body) || matches!(ret_ty, Ty::Void) {
         for s in &decl.body.stmts {
             check_stmt(
                 s,
@@ -148,21 +155,7 @@ pub fn check_function_decl(
         return;
     }
 
-    if matches!(ret_ty, Ty::Void) {
-        for s in &decl.body.stmts {
-            check_stmt(
-                s,
-                Some(&ret_ty),
-                &mut env,
-                program,
-                &mut effects,
-                diagnostics,
-            );
-        }
-        return;
-    }
-
-    let Some((last, rest)) = decl.body.stmts.split_last() else {
+    let Some(last) = decl.body.stmts.last() else {
         diagnostics.push(Diagnostic {
             code: ErrorCode::BranchTypeMismatch,
             span: decl.span,
@@ -170,9 +163,9 @@ pub fn check_function_decl(
         });
         return;
     };
-    for s in rest {
+    for statement in &decl.body.stmts {
         check_stmt(
-            s,
+            statement,
             Some(&ret_ty),
             &mut env,
             program,
@@ -180,14 +173,6 @@ pub fn check_function_decl(
             diagnostics,
         );
     }
-    check_stmt(
-        last,
-        Some(&ret_ty),
-        &mut env,
-        program,
-        &mut effects,
-        diagnostics,
-    );
     if !matches!(&last.kind, StmtKind::Return(Some(_))) {
         diagnostics.push(Diagnostic {
             code: ErrorCode::BranchTypeMismatch,
@@ -219,11 +204,13 @@ pub fn check_struct_decl(
             .collect(),
     };
     for m in &decl.methods {
-        let mutable = m.self_param.as_ref().is_some_and(|sp| sp.mutable);
+        let self_param = m.self_param.as_ref();
+        let mutable = self_param.is_some_and(|sp| sp.mutable);
+        let self_span = self_param.map_or(m.span, |sp| sp.span);
         check_function_decl(
             m,
             &decl.generics,
-            Some((&self_ty, mutable)),
+            Some((&self_ty, mutable, self_span)),
             program,
             diagnostics,
         );
