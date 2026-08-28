@@ -1,17 +1,10 @@
-//! Chains lex→parse→module_resolve→check→effects→lint→(fmt|eval|doctest) and decides the exit
-//! code (ARCHITECTURE.md §4).
+//! Chains the shared front end (lex→parse→module_resolve→type-check) into execution, checking,
+//! doc tests, or LSP analysis and decides the exit code (ARCHITECTURE.md §4).
 //!
-//! `ybm <file>` (Run) **does not include lint**, per the table in SPEC §1 (it runs only after
-//! type checking succeeds). The diagram in ARCHITECTURE.md §4.1 depicts the 6-phase pipeline
-//! shared by all 3 subcommands as including EffectCheck/Lint, but all 14 cases under
-//! `samples/err/runtime/` use `cmd = "run"` and involve an unused variable (e.g. `oob_value` in
-//! `entry_list_index_oob.ybm`); if Lint were also run, E4001 would be reported before the
-//! E6xxx the case is actually meant to exercise, which is a contradiction. This file treats the
-//! table in SPEC §1 (`ybm <file>` is type-checking only) as canonical and limits Run's static
-//! phases to the 4 stages Lex→Parse→ModuleResolve→TypeCheck (judgment call made in this file).
-//! `check`/`test` are, in fact, the only commands where `samples/err/lint/*` and
-//! `samples/err/static/8_effect_errors` verify EffectCheck/Lint — and only via `cmd = "check"` —
-//! so these two commands run the full 6-stage set.
+//! `ybm <file>` (Run) **does not include EffectCheck or lint**, per the table in SPEC §1; it
+//! executes only after the four front-end stages succeed. `check` and `test` run EffectCheck and
+//! lint, while `ybm lsp` uses those checks plus doc-fence type checking for open documents but
+//! never executes source files.
 
 use crate::ast::{Block, DocFence, FunctionDecl, Item, NodeId, Stmt, TypeAnn, TypeAnnKind};
 use crate::cli::Subcommand;
@@ -37,6 +30,48 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::Arc;
 
+/// Unsaved source contents keyed by canonical paths.
+pub(crate) struct Overlay(pub(crate) HashMap<PathBuf, String>);
+
+impl Overlay {
+    fn get(&self, path: &Path) -> Option<&str> {
+        self.0.get(path).map(String::as_str)
+    }
+}
+
+pub(crate) fn canonical_or_raw(path: &Path) -> PathBuf {
+    fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
+}
+
+fn discover_sibling_modules(discovery_path: &Path, overlay: &Overlay) -> Vec<PathBuf> {
+    let parent = discovery_path.parent().unwrap_or_else(|| Path::new("."));
+    let entry_name = discovery_path.file_name();
+    let mut paths = module_resolve::discover_sibling_modules(discovery_path);
+
+    // Disk discovery cannot see unsaved module directives. It also cannot reflect an open
+    // module whose directive was removed, so overlay contents take precedence for every open
+    // sibling in this directory.
+    paths.retain(|path| {
+        overlay
+            .get(path)
+            .is_none_or(crate::lexer::text_starts_with_module_keyword)
+    });
+    for path in overlay.0.keys() {
+        if path.parent() == Some(parent)
+            && path.file_name() != entry_name
+            && path.extension().and_then(|ext| ext.to_str()) == Some("ybm")
+            && overlay
+                .get(path)
+                .is_some_and(crate::lexer::text_starts_with_module_keyword)
+            && !paths.contains(path)
+        {
+            paths.push(path.clone());
+        }
+    }
+    paths.sort();
+    paths
+}
+
 /// The entire §4.1-4.4 pipeline. Running it on a dedicated-stack-size thread is §5.7/main.rs's
 /// responsibility.
 ///
@@ -47,6 +82,11 @@ use std::sync::Arc;
 /// this file).
 #[must_use]
 pub fn run_pipeline(subcommand: &Subcommand) -> ExitCode {
+    if matches!(subcommand, Subcommand::Lsp) {
+        let stdin = std::io::stdin();
+        let stdout = std::io::stdout();
+        return crate::lsp::run_server(stdin.lock(), stdout);
+    }
     let mut stdout = std::io::stdout();
     let mut stderr = std::io::stderr();
     if run_pipeline_impl(subcommand, &mut stdout, &mut stderr) {
@@ -61,10 +101,11 @@ fn run_pipeline_impl(subcommand: &Subcommand, out: &mut dyn Write, err: &mut dyn
         Subcommand::Run { file } => run_command(file, err),
         Subcommand::Check { file, apply_fmt } => check_command(file, *apply_fmt, out, err),
         Subcommand::Test { file } => test_command(file, out, err),
+        Subcommand::Lsp => unreachable!("LSP is handled by run_pipeline"),
     }
 }
 
-/// The front end shared by all 3 subcommands (ARCHITECTURE.md §4.1/§4.2): runs
+/// The front end shared by all 4 subcommands (ARCHITECTURE.md §4.1/§4.2): runs
 /// Lex→Parse→ModuleResolve→TypeCheck and assembles the `Program` skeleton, the entry's
 /// top-level executable statements, and (when requested) doc fences.
 struct FrontEnd {
@@ -81,8 +122,22 @@ struct FrontEnd {
     prelude_function_names: std::collections::HashSet<Arc<str>>,
 }
 
+pub(crate) struct IoFailure {
+    pub(crate) path: PathBuf,
+    pub(crate) code: ErrorCode,
+    pub(crate) message: String,
+}
+
+enum FrontEndFailure {
+    Io(IoFailure),
+    Diags {
+        bag: DiagnosticBag,
+        sources: Arc<SourceMap>,
+    },
+}
+
 fn run_command(file: &Path, err: &mut dyn Write) -> bool {
-    let Ok(front) = run_front_end(file, false, err) else {
+    let Some(front) = front_end_or_report(file, false, &Overlay(HashMap::new()), err) else {
         return false;
     };
     let FrontEnd {
@@ -92,8 +147,11 @@ fn run_command(file: &Path, err: &mut dyn Write) -> bool {
         entry_stmts,
         ..
     } = front;
-    register_entry_point(&mut program, front_entry_file(&files), entry_stmts);
-    if !run_effect_check(&mut program, &sources, err) {
+    register_entry_point(&mut program, files[0].1, entry_stmts);
+    let mut diagnostics = DiagnosticBag::new();
+    effects::check_program_effects(&mut program, &mut diagnostics);
+    if diagnostics.has_any() {
+        report_diagnostics(err, diagnostics, &sources);
         return false;
     }
 
@@ -115,7 +173,7 @@ fn check_command(
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> bool {
-    let Ok(front) = run_front_end(file, true, err) else {
+    let Some(front) = front_end_or_report(file, true, &Overlay(HashMap::new()), err) else {
         return false;
     };
     let FrontEnd {
@@ -126,10 +184,11 @@ fn check_command(
         fences,
         prelude_function_names,
     } = front;
-    let entry_file = front_entry_file(&files);
-    register_entry_point(&mut program, entry_file, entry_stmts);
+    register_entry_point(&mut program, files[0].1, entry_stmts);
 
-    if !run_effect_and_lint(&mut program, &sources, &prelude_function_names, err) {
+    let diagnostics = run_effect_and_lint(&mut program, &prelude_function_names);
+    if diagnostics.has_any() {
+        report_diagnostics(err, diagnostics, &sources);
         return false;
     }
 
@@ -144,7 +203,7 @@ fn check_command(
 }
 
 fn test_command(file: &Path, out: &mut dyn Write, err: &mut dyn Write) -> bool {
-    let Ok(front) = run_front_end(file, true, err) else {
+    let Some(front) = front_end_or_report(file, true, &Overlay(HashMap::new()), err) else {
         return false;
     };
     let FrontEnd {
@@ -155,10 +214,11 @@ fn test_command(file: &Path, out: &mut dyn Write, err: &mut dyn Write) -> bool {
         fences,
         prelude_function_names,
     } = front;
-    let entry_file = front_entry_file(&files);
-    register_entry_point(&mut program, entry_file, entry_stmts);
+    register_entry_point(&mut program, files[0].1, entry_stmts);
 
-    if !run_effect_and_lint(&mut program, &sources, &prelude_function_names, err) {
+    let diagnostics = run_effect_and_lint(&mut program, &prelude_function_names);
+    if diagnostics.has_any() {
+        report_diagnostics(err, diagnostics, &sources);
         return false;
     }
 
@@ -175,80 +235,68 @@ fn test_command(file: &Path, out: &mut dyn Write, err: &mut dyn Write) -> bool {
     fail_count == 0
 }
 
-fn front_entry_file(files: &[(PathBuf, FileId)]) -> FileId {
-    files[0].1
-}
-
-/// EffectCheck→Lint (shared by `check`/`test`; `run` does not execute this — see the judgment
-/// call at the top of this file). If either produces diagnostics, reports them to stderr and
-/// returns `false`.
-fn run_effect_check(program: &mut Program, sources: &SourceMap, err: &mut dyn Write) -> bool {
-    let mut diagnostics = DiagnosticBag::new();
-    effects::check_program_effects(program, &mut diagnostics);
-    if diagnostics.has_any() {
-        report_diagnostics(err, diagnostics, sources);
-        false
-    } else {
-        true
-    }
-}
-
+/// EffectCheck→Lint (shared by `check`/`test`; `run` does not execute this).
 fn run_effect_and_lint(
     program: &mut Program,
-    sources: &SourceMap,
     prelude_function_names: &std::collections::HashSet<Arc<str>>,
-    err: &mut dyn Write,
-) -> bool {
-    if !run_effect_check(program, sources, err) {
-        return false;
+) -> DiagnosticBag {
+    let mut effect_bag = DiagnosticBag::new();
+    effects::check_program_effects(program, &mut effect_bag);
+    if effect_bag.has_any() {
+        return effect_bag;
     }
 
-    // Lint (`src/lint/**`, outside this scope) unconditionally scans `program.functions` and
-    // mistakes the built-in function placeholders (int/float/str/print/eprint/assert/set)
-    // registered by `stdlib::prelude` for "declarations belonging to the entry file itself",
-    // falsely reporting E4001/E4002 (see the comment near the `prelude::install` call in
-    // `run_front_end`). They were kept around this far because TypeCheck/EffectCheck needed
-    // them to resolve callees for pipes like `x |> str`, but they are no longer needed — and
-    // are actively harmful — for Lint, so they are removed right before it.
+    // Keep prelude functions available through TypeCheck/EffectCheck, but remove them before
+    // Lint so they are not reported as user declarations.
     program
         .functions
         .retain(|name, _| !prelude_function_names.contains(name));
 
     let mut lint_bag = DiagnosticBag::new();
     lint::check_all(program, &mut lint_bag);
-    if lint_bag.has_any() {
-        report_diagnostics(err, lint_bag, sources);
-        return false;
-    }
-    true
+    lint_bag
 }
 
-/// D-CLI-04: extension and existence check. Returns the file contents on success.
-fn check_entry_path_and_read(entry_path: &Path, err: &mut dyn Write) -> Result<String, ()> {
-    if entry_path.extension().and_then(|e| e.to_str()) != Some("ybm") {
-        report_cli_io_error(
-            err,
-            entry_path,
-            ErrorCode::InvalidExtension,
-            "the extension must be .ybm",
-        );
-        return Err(());
+fn read_source_file(path: &Path, overlay: &Overlay) -> Result<String, (ErrorCode, String)> {
+    if let Some(text) = overlay.get(path) {
+        return Ok(text.to_owned());
     }
-    read_source_file(entry_path, err)
-}
-
-fn read_source_file(path: &Path, err: &mut dyn Write) -> Result<String, ()> {
     fs::read_to_string(path).map_err(|error| {
-        let (code, message) = if error.kind() == std::io::ErrorKind::NotFound {
+        if error.kind() == std::io::ErrorKind::NotFound {
             (ErrorCode::FileNotFound, "file not found".to_owned())
         } else {
             (
                 ErrorCode::FileReadFailure,
                 format!("cannot read file: {error}"),
             )
-        };
-        report_cli_io_error(err, path, code, &message);
+        }
     })
+}
+
+fn front_end_or_report(
+    file: &Path,
+    need_doc_fences: bool,
+    overlay: &Overlay,
+    err: &mut dyn Write,
+) -> Option<FrontEnd> {
+    match run_front_end(file, need_doc_fences, overlay) {
+        Ok(front) => Some(front),
+        Err(FrontEndFailure::Io(error)) => {
+            report_cli_io_error(err, &error.path, error.code, &error.message);
+            None
+        }
+        Err(FrontEndFailure::Diags { bag, sources }) => {
+            report_diagnostics(err, bag, &sources);
+            None
+        }
+    }
+}
+
+fn diagnostics_failure(bag: DiagnosticBag, sources: &Arc<SourceMap>) -> FrontEndFailure {
+    FrontEndFailure::Diags {
+        bag,
+        sources: Arc::clone(sources),
+    }
 }
 
 fn report_cli_io_error(err: &mut dyn Write, path: &Path, code: ErrorCode, message: &str) {
@@ -271,24 +319,28 @@ fn report_diagnostics(err: &mut dyn Write, bag: DiagnosticBag, sources: &SourceM
 fn run_front_end(
     entry_path: &Path,
     need_doc_fences: bool,
-    err: &mut dyn Write,
-) -> Result<FrontEnd, ()> {
-    let entry_text = check_entry_path_and_read(entry_path, err)?;
+    overlay: &Overlay,
+) -> Result<FrontEnd, FrontEndFailure> {
+    if entry_path.extension().and_then(|e| e.to_str()) != Some("ybm") {
+        return Err(FrontEndFailure::Io(IoFailure {
+            path: entry_path.to_path_buf(),
+            code: ErrorCode::InvalidExtension,
+            message: "the extension must be .ybm".to_owned(),
+        }));
+    }
+    let entry_text = read_source_file(entry_path, overlay).map_err(|(code, message)| {
+        FrontEndFailure::Io(IoFailure {
+            path: entry_path.to_path_buf(),
+            code,
+            message,
+        })
+    })?;
 
     // `Path::parent()` returns `Some("")` rather than `None` for a bare filename with no
-    // directory component (e.g. `ybm entry.ybm`, an entirely normal way to invoke it — just an
-    // extension-bearing filename relative to the current directory). `discover_sibling_modules`
-    // (module_resolve/mod.rs, outside this scope) passes this `parent()` result straight to
-    // `std::fs::read_dir`, so reading an empty-string path fails and no sibling modules are
-    // found at all (reported as needing adjustment). Making the path absolute with
-    // `canonicalize` before passing it in ensures `parent()` always has a proper directory
-    // component, so this call form makes `discover_sibling_modules` reliably work from within
-    // driver.rs too. Since `check_entry_path_and_read` has already confirmed the read
-    // succeeded, `canonicalize` can only fail on a rare TOCTOU race — in that case we fall back
-    // to the original path (this only leaves us with the pre-existing "no sibling found"
-    // behavior, causing no new harm).
-    let discovery_path = fs::canonicalize(entry_path).unwrap_or_else(|_| entry_path.to_path_buf());
-    let mut sibling_paths = module_resolve::discover_sibling_modules(&discovery_path);
+    // directory component. Make the path absolute before sibling discovery so that this
+    // ordinary invocation form still searches the working directory.
+    let discovery_path = canonical_or_raw(entry_path);
+    let mut sibling_paths = discover_sibling_modules(&discovery_path, overlay);
     let mut paths = vec![entry_path.to_path_buf()];
     paths.append(&mut sibling_paths);
 
@@ -296,40 +348,39 @@ fn run_front_end(
     let mut file_ids = Vec::with_capacity(paths.len());
     file_ids.push(sources.add(paths[0].clone(), entry_text));
     for path in &paths[1..] {
-        let text = read_source_file(path, err)?;
+        let text = read_source_file(path, overlay).map_err(|(code, message)| {
+            FrontEndFailure::Io(IoFailure {
+                path: path.clone(),
+                code,
+                message,
+            })
+        })?;
         file_ids.push(sources.add(path.clone(), text));
     }
+    let files: Vec<(PathBuf, FileId)> = paths.into_iter().zip(file_ids.iter().copied()).collect();
+    let sources = Arc::new(sources);
 
-    let Some((tokens_per_file, comments_per_file)) = lex_all_files(&file_ids, &sources, err) else {
-        return Err(());
-    };
+    let (tokens_per_file, comments_per_file) =
+        lex_all_files(&file_ids, &sources).map_err(|bag| diagnostics_failure(bag, &sources))?;
+    let mut modules = parse_all_files(&file_ids, tokens_per_file, comments_per_file)
+        .map_err(|bag| diagnostics_failure(bag, &sources))?;
 
-    let Some(mut modules) =
-        parse_all_files(&file_ids, tokens_per_file, comments_per_file, err, &sources)
-    else {
-        return Err(());
-    };
-
-    let fences = if need_doc_fences {
-        doctest::collect_fences(&modules)
+    let (fences, pseudo_consts) = if need_doc_fences {
+        (
+            doctest::collect_fences(&modules),
+            doctest::collect_doctest_pseudo_consts(&modules),
+        )
     } else {
-        Vec::new()
-    };
-    let pseudo_consts = if need_doc_fences {
-        doctest::collect_doctest_pseudo_consts(&modules)
-    } else {
-        Vec::new()
+        (Vec::new(), Vec::new())
     };
 
     let entry_stmts = take_entry_top_level_stmts(&mut modules[0]);
 
-    let sources = Arc::new(sources);
     let mut resolve_bag = DiagnosticBag::new();
     let mut program =
         module_resolve::build_program_skeleton(modules, Arc::clone(&sources), &mut resolve_bag);
     if resolve_bag.has_any() {
-        report_diagnostics(err, resolve_bag, &sources);
-        return Err(());
+        return Err(diagnostics_failure(resolve_bag, &sources));
     }
 
     let prelude_function_names: std::collections::HashSet<Arc<str>> =
@@ -345,11 +396,8 @@ fn run_front_end(
     let mut type_bag = DiagnosticBag::new();
     check_program(&mut program, &entry_stmts, &mut type_bag);
     if type_bag.has_any() {
-        report_diagnostics(err, type_bag, &sources);
-        return Err(());
+        return Err(diagnostics_failure(type_bag, &sources));
     }
-
-    let files: Vec<(PathBuf, FileId)> = paths.into_iter().zip(file_ids).collect();
 
     Ok(FrontEnd {
         program,
@@ -363,13 +411,11 @@ fn run_front_end(
 
 type LexedFile = (Vec<Token>, crate::lexer::comments::CommentStream);
 
-/// Lex phase: tokenizes every file, and if there is even a single diagnostic, reports it and
-/// returns `None` (D-CLI-03: gating between phases).
+/// Lex phase: tokenizes every file and returns all diagnostics when any are found.
 fn lex_all_files(
     file_ids: &[FileId],
     sources: &SourceMap,
-    err: &mut dyn Write,
-) -> Option<(Vec<Vec<Token>>, Vec<crate::lexer::comments::CommentStream>)> {
+) -> Result<(Vec<Vec<Token>>, Vec<crate::lexer::comments::CommentStream>), DiagnosticBag> {
     let mut lex_bag = DiagnosticBag::new();
     let mut tokens_per_file = Vec::with_capacity(file_ids.len());
     let mut comments_per_file = Vec::with_capacity(file_ids.len());
@@ -383,10 +429,10 @@ fn lex_all_files(
         comments_per_file.push(comments);
     }
     if lex_bag.has_any() {
-        report_diagnostics(err, lex_bag, sources);
-        return None;
+        Err(lex_bag)
+    } else {
+        Ok((tokens_per_file, comments_per_file))
     }
-    Some((tokens_per_file, comments_per_file))
 }
 
 /// Parse phase: reached only when Lex produced zero diagnostics across all files.
@@ -394,9 +440,7 @@ fn parse_all_files(
     file_ids: &[FileId],
     tokens_per_file: Vec<Vec<Token>>,
     comments_per_file: Vec<crate::lexer::comments::CommentStream>,
-    err: &mut dyn Write,
-    sources: &SourceMap,
-) -> Option<Vec<crate::ast::Module>> {
+) -> Result<Vec<crate::ast::Module>, DiagnosticBag> {
     let mut parse_bag = DiagnosticBag::new();
     let mut modules = Vec::with_capacity(file_ids.len());
     let mut next_node_id = 0;
@@ -410,10 +454,10 @@ fn parse_all_files(
         modules.push(module);
     }
     if parse_bag.has_any() {
-        report_diagnostics(err, parse_bag, sources);
-        return None;
+        Err(parse_bag)
+    } else {
+        Ok(modules)
     }
-    Some(modules)
 }
 
 /// Extracts the entry file's `Item::Stmt` (top-level executable statements).
@@ -497,6 +541,54 @@ fn typecheck_fences_only(fences: &[DocFence], program: &Program, diagnostics: &m
     }
 }
 
+#[expect(
+    clippy::large_enum_variant,
+    reason = "the checked analysis keeps its Program available for LSP queries"
+)]
+pub(crate) enum Analysis {
+    Io(IoFailure),
+    Checked {
+        sources: Arc<SourceMap>,
+        diagnostics: Vec<Diagnostic>,
+        program: Option<Program>,
+    },
+}
+
+pub(crate) fn analyze(entry_path: &Path, overlay: &Overlay) -> Analysis {
+    let front = match run_front_end(entry_path, true, overlay) {
+        Ok(front) => front,
+        Err(FrontEndFailure::Io(error)) => return Analysis::Io(error),
+        Err(FrontEndFailure::Diags { bag, sources }) => {
+            return Analysis::Checked {
+                diagnostics: bag.into_sorted(&sources),
+                sources,
+                program: None,
+            };
+        }
+    };
+    let FrontEnd {
+        mut program,
+        sources,
+        files,
+        entry_stmts,
+        fences,
+        prelude_function_names,
+    } = front;
+    register_entry_point(&mut program, files[0].1, entry_stmts);
+
+    let mut diagnostics = run_effect_and_lint(&mut program, &prelude_function_names);
+    let mut fence_bag = DiagnosticBag::new();
+    typecheck_fences_only(&fences, &program, &mut fence_bag);
+    for diagnostic in fence_bag.into_vec() {
+        diagnostics.push(diagnostic);
+    }
+    Analysis::Checked {
+        diagnostics: diagnostics.into_sorted(&sources),
+        sources,
+        program: Some(program),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // fmt (`ybm check`'s read-only default / `--apply` rewrite, ARCHITECTURE.md §4.3, D-MOD-04).
 // ---------------------------------------------------------------------------
@@ -540,11 +632,16 @@ fn reattach_shebang(original_text: &str, formatted_body: &str) -> String {
 /// not implement `Clone`, the driver follows the same existing pattern test code (e.g.
 /// `stdlib/mod.rs`) uses: "parse multiple times and reuse it per ownership-demanding
 /// consumer").
-fn format_file_text(original: &str, file: FileId) -> String {
+pub(crate) fn format_file_text(original: &str) -> String {
+    let file = FileId(0);
     let (tokens, comments, _lex_diag) = Lexer::new(original, file).tokenize();
     let (mut module, _parse_diag) = parse_module(&tokens, file);
     attach_comments(&mut module, comments);
-    let formatted_body = fmt::format_module(&module);
+    format_module_text(original, &module)
+}
+
+pub(crate) fn format_module_text(original: &str, module: &crate::ast::Module) -> String {
+    let formatted_body = fmt::format_module(module);
     reattach_shebang(original, &formatted_body)
 }
 
@@ -561,7 +658,7 @@ fn apply_fmt(
     let mut outputs: Vec<(PathBuf, String, String)> = Vec::with_capacity(files.len());
     for (path, fid) in files {
         let original = sources.file(*fid).text().to_owned();
-        let formatted = format_file_text(&original, *fid);
+        let formatted = format_file_text(&original);
         outputs.push((path.clone(), original, formatted));
     }
 

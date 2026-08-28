@@ -15,7 +15,7 @@
 
 use crate::ast::{
     Arg, BinaryOp, Block, ElseBranch, Expr, ExprKind, FStringSegment, IfExpr, LiteralPat, MatchArm,
-    MatchArmBody, ParKind, Param, Pattern, PipeCallee, StmtKind, SubPattern, UnaryOp,
+    MatchArmBody, NodeId, ParKind, Param, Pattern, PipeCallee, StmtKind, SubPattern, UnaryOp,
 };
 use crate::diagnostics::{Diagnostic, DiagnosticBag, ErrorCode, Span};
 use crate::eval::env::Program;
@@ -95,6 +95,13 @@ fn t_fn(params: Vec<Ty>, ret: Ty) -> Ty {
 }
 fn tv(name: &str) -> Ty {
     Ty::TypeVar(Arc::from(name))
+}
+
+fn declared_effects(names: &[Arc<str>]) -> EffectSet {
+    names
+        .iter()
+        .filter_map(|name| EffectSet::from_name(name.as_ref()))
+        .fold(EffectSet::empty(), EffectSet::union)
 }
 
 /// The signature of a single stdlib item (a namespace function or a builtin method). To
@@ -639,7 +646,9 @@ fn check_expr_kind(
             }
             Ty::Str
         }
-        ExprKind::Ident(name) => check_ident(name, span, expected, env, program, diagnostics),
+        ExprKind::Ident(name) => {
+            check_ident(name, span, expr.id, expected, env, program, diagnostics)
+        }
         ExprKind::ListLit { elements, .. } => check_seq_lit(
             elements,
             expected,
@@ -1004,30 +1013,31 @@ fn check_dict_lit(
 fn check_ident(
     name: &Arc<str>,
     span: Span,
+    id: NodeId,
     expected: Option<&Ty>,
     env: &TypeEnv,
-    program: &Program,
+    program: &mut Program,
     diagnostics: &mut DiagnosticBag,
 ) -> Ty {
     if let Some(binding) = env.lookup(name.as_ref()) {
-        return binding.ty.clone();
+        let ty = binding.ty.clone();
+        program.resolutions.ident_def.insert(id, binding.def_span);
+        return ty;
     }
     if let Some((enum_name, generics)) = find_builtin_unit_variant(name) {
         return resolve_unit_variant_ty(enum_name, generics.len(), expected, span, diagnostics).1;
     }
-    for e in program.enums.values() {
-        if let Some(v) = e.variants.iter().find(|v| v.name.as_ref() == name.as_ref())
-            && v.fields.is_empty()
-        {
-            return resolve_unit_variant_ty(
-                e.name.as_ref(),
-                e.generics.len(),
-                expected,
-                span,
-                diagnostics,
-            )
-            .1;
-        }
+    let user_variant = program.enums.values().find_map(|e| {
+        e.variants
+            .iter()
+            .find(|v| v.name.as_ref() == name.as_ref() && v.fields.is_empty())
+            .map(|v| (Arc::clone(&e.name), e.generics.len(), v.span))
+    });
+    if let Some((enum_name, generics, def_span)) = user_variant {
+        let ty =
+            resolve_unit_variant_ty(enum_name.as_ref(), generics, expected, span, diagnostics).1;
+        program.resolutions.ident_def.insert(id, def_span);
+        return ty;
     }
     if let Some(f) = program.functions.get(name.as_ref()) {
         // The case of referencing a top-level function name as a value (a simple case
@@ -1040,20 +1050,21 @@ fn check_ident(
             .map(|p| ty_from_ann(&p.ty, &f.generics, program).unwrap_or(Ty::Unknown))
             .collect();
         let ret = ty_from_ann(&f.ret, &f.generics, program).unwrap_or(Ty::Unknown);
-        let mut effect_set = EffectSet::empty();
-        for e in &f.effects {
-            if let Some(bit) = EffectSet::from_name(e) {
-                effect_set = effect_set.union(bit);
-            }
-        }
-        return Ty::Function {
+        let effect_set = declared_effects(&f.effects);
+        let ty = Ty::Function {
             params,
             effects: effect_set,
             ret: Box::new(ret),
         };
+        program.resolutions.ident_def.insert(id, f.span);
+        return ty;
     }
     if let Some(v) = program.consts.get(name.as_ref()) {
-        return ty_of_const_value(v);
+        let ty = ty_of_const_value(v);
+        if let Some(def_span) = program.const_spans.get(name.as_ref()).copied() {
+            program.resolutions.ident_def.insert(id, def_span);
+        }
+        return ty;
     }
     // Undefined identifier: since DECISIONS.md has no dedicated diagnostic code for this
     // (a known limitation), this reuses E1003 and returns the recovery placeholder
@@ -1679,6 +1690,7 @@ fn check_call(
         .collect();
     check_call_named(
         name,
+        callee.id,
         call_expr,
         &explicit_tys,
         args,
@@ -1706,6 +1718,7 @@ at-a-glance visibility of the priority order"
 )]
 fn check_call_named(
     name: &Arc<str>,
+    callee_id: NodeId,
     call_expr: &Expr,
     explicit_tys: &[Ty],
     args: &[Arg],
@@ -1839,6 +1852,7 @@ fn check_call_named(
     }
 
     if let Some(s) = program.structs.get(name.as_ref()).cloned() {
+        program.resolutions.ident_def.insert(callee_id, s.span);
         program
             .resolutions
             .call_kind
@@ -1855,10 +1869,13 @@ fn check_call_named(
             diagnostics,
         );
     }
-
-    if let Some((enum_decl, variant_fields, variant_generics)) =
+    if let Some((enum_decl, variant_fields, variant_generics, variant_span)) =
         find_enum_variant(program, name.as_ref())
     {
+        program
+            .resolutions
+            .ident_def
+            .insert(callee_id, variant_span);
         program
             .resolutions
             .call_kind
@@ -1901,16 +1918,12 @@ fn check_call_named(
     }
 
     if let Some(f) = program.functions.get(name.as_ref()).cloned() {
+        program.resolutions.ident_def.insert(callee_id, f.span);
         program
             .resolutions
             .call_kind
             .insert(call_expr.id, CallKind::FunctionCall);
-        let mut own_effects = EffectSet::empty();
-        for e in &f.effects {
-            if let Some(bit) = EffectSet::from_name(e) {
-                own_effects = own_effects.union(bit);
-            }
-        }
+        let own_effects = declared_effects(&f.effects);
         let params: Vec<Ty> = f
             .params
             .iter()
@@ -1935,7 +1948,7 @@ fn check_call_named(
             own_effects,
             forward_fn_effects: false,
         };
-        return check_positional_call(
+        let result = check_positional_call(
             &sig,
             &arg_exprs,
             explicit_tys,
@@ -1947,6 +1960,15 @@ fn check_call_named(
             effects,
             diagnostics,
         );
+        program.resolutions.expr_ty.insert(
+            callee_id,
+            Ty::Function {
+                params,
+                effects: own_effects,
+                ret: Box::new(ret),
+            },
+        );
+        return result;
     }
 
     diagnostics.push(Diagnostic {
@@ -1960,8 +1982,9 @@ fn check_call_named(
     Ty::Unknown
 }
 
-/// The enum name, the list of the variant's field types, and the enum's own list of generic names.
-type EnumVariantInfo = (Arc<str>, Vec<Ty>, Vec<Arc<str>>);
+/// The enum name, the list of the variant's field types, the enum's own list of generic names,
+/// and the variant's declaration span.
+type EnumVariantInfo = (Arc<str>, Vec<Ty>, Vec<Arc<str>>, Span);
 
 fn find_enum_variant(program: &Program, name: &str) -> Option<EnumVariantInfo> {
     for e in program.enums.values() {
@@ -1971,7 +1994,7 @@ fn find_enum_variant(program: &Program, name: &str) -> Option<EnumVariantInfo> {
                 .iter()
                 .map(|t| ty_from_ann(t, &e.generics, program).unwrap_or(Ty::Unknown))
                 .collect();
-            return Some((Arc::clone(&e.name), fields, e.generics.clone()));
+            return Some((Arc::clone(&e.name), fields, e.generics.clone(), v.span));
         }
     }
     None
@@ -2972,12 +2995,7 @@ fn check_pipe_stage(
     if let ExprKind::Ident(name) = &callee_expr.kind
         && let Some(f) = program.functions.get(name.as_ref()).cloned()
     {
-        let mut own_effects = EffectSet::empty();
-        for e in &f.effects {
-            if let Some(bit) = EffectSet::from_name(e) {
-                own_effects = own_effects.union(bit);
-            }
-        }
+        let own_effects = declared_effects(&f.effects);
         let params: Vec<Ty> = f
             .params
             .iter()
@@ -3772,12 +3790,7 @@ fn dispatch_struct_method(
         &ty_from_ann(&m.ret, &combined_scope, program).unwrap_or(Ty::Unknown),
         &outer_subst,
     );
-    let mut own_effects = EffectSet::empty();
-    for e in &m.effects {
-        if let Some(bit) = EffectSet::from_name(e) {
-            own_effects = own_effects.union(bit);
-        }
-    }
+    let own_effects = declared_effects(&m.effects);
     if m.self_param.as_ref().is_some_and(|sp| sp.mutable) {
         mutability::check_mutable_place(receiver, env, diagnostics);
     }
@@ -3843,7 +3856,7 @@ fn check_lambda(
         } else {
             Ty::Unknown
         };
-        env.bind(Arc::clone(&p.name), ty.clone(), false);
+        env.bind(Arc::clone(&p.name), ty.clone(), false, p.span);
         param_tys.push(ty);
     }
     let body_ret_ctx: Option<Ty> = expected_fn
@@ -4031,7 +4044,7 @@ fn bind_subpattern(
             }
         }
         SubPattern::Wildcard(_) => {}
-        SubPattern::BareIdent(name, node_id, _) => {
+        SubPattern::BareIdent(name, node_id, span) => {
             if is_known_unit_variant(name, expected, program) {
                 program
                     .resolutions
@@ -4042,7 +4055,7 @@ fn bind_subpattern(
                     .resolutions
                     .bare_ident_kind
                     .insert(*node_id, BareIdentKind::Binding);
-                env.bind(Arc::clone(name), expected.clone(), false);
+                env.bind(Arc::clone(name), expected.clone(), false, *span);
             }
         }
     }
@@ -4064,7 +4077,7 @@ fn bind_pattern(
             }
         }
         Pattern::Wildcard(_) => {}
-        Pattern::BareIdent(name, node_id, _) => {
+        Pattern::BareIdent(name, node_id, span) => {
             if is_known_unit_variant(name, scrutinee_ty, program) {
                 program
                     .resolutions
@@ -4075,7 +4088,7 @@ fn bind_pattern(
                     .resolutions
                     .bare_ident_kind
                     .insert(*node_id, BareIdentKind::Binding);
-                env.bind(Arc::clone(name), scrutinee_ty.clone(), false);
+                env.bind(Arc::clone(name), scrutinee_ty.clone(), false, *span);
             }
         }
         Pattern::Tuple { elements, span } => {

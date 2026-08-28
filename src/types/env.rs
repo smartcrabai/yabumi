@@ -18,6 +18,7 @@
 //! boundary would require that borrow to have the same length as the struct's own type
 //! parameter, which an ordinary `&mut` argument cannot satisfy).
 
+use crate::diagnostics::Span;
 use crate::types::Ty;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -32,6 +33,8 @@ pub struct Binding {
     /// (immutable) or an ordinary function parameter (D-MUT-04: always passed by value
     /// copy and cannot even be reassigned).
     pub mutable: bool,
+    /// Source span of the binding's declaration.
+    pub def_span: Span,
 }
 
 type Scope = HashMap<Arc<str>, Binding>;
@@ -89,11 +92,18 @@ impl TypeEnv {
     /// overwritten (as same-scope shadowing) -- determining the legality of the shadowing
     /// itself is lint's responsibility (D-LINT-03), and type checking does not block it
     /// here.
-    pub fn bind(&mut self, name: Arc<str>, ty: Ty, mutable: bool) {
+    pub fn bind(&mut self, name: Arc<str>, ty: Ty, mutable: bool, def_span: Span) {
         self.scopes
             .last_mut()
             .unwrap_or_else(|| unreachable!("TypeEnv always has at least one scope"))
-            .insert(name, Binding { ty, mutable });
+            .insert(
+                name,
+                Binding {
+                    ty,
+                    mutable,
+                    def_span,
+                },
+            );
     }
 
     /// Recursively searches from the innermost scope outward. D-LINT-03 (shadowing)
@@ -115,13 +125,22 @@ impl TypeEnv {
 #[cfg(test)]
 mod tests {
     use super::TypeEnv;
+    use crate::diagnostics::{FileId, Position, Span};
     use crate::types::Ty;
     use std::sync::Arc;
+
+    fn dummy_span() -> Span {
+        Span {
+            file: FileId(0),
+            start: Position { line: 1, col: 1 },
+            end: Position { line: 1, col: 1 },
+        }
+    }
 
     #[test]
     fn lookup_finds_binding_in_parent_scope() {
         let mut env = TypeEnv::root();
-        env.bind(Arc::from("x"), Ty::Int, false);
+        env.bind(Arc::from("x"), Ty::Int, false, dummy_span());
         env.push_scope();
         let found = env.lookup("x");
         assert!(matches!(found.map(|b| &b.ty), Some(Ty::Int)));
@@ -132,9 +151,9 @@ mod tests {
     #[test]
     fn child_binding_shadows_parent_without_mutating_it() {
         let mut env = TypeEnv::root();
-        env.bind(Arc::from("x"), Ty::Int, false);
+        env.bind(Arc::from("x"), Ty::Int, false, dummy_span());
         env.push_scope();
-        env.bind(Arc::from("x"), Ty::Str, true);
+        env.bind(Arc::from("x"), Ty::Str, true, dummy_span());
         assert!(matches!(env.lookup("x").map(|b| &b.ty), Some(Ty::Str)));
         env.pop_scope();
         assert!(matches!(env.lookup("x").map(|b| &b.ty), Some(Ty::Int)));

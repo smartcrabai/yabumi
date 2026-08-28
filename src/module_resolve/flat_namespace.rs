@@ -73,6 +73,7 @@ pub fn register_flat_namespace(
                         let is_new =
                             try_declare(&mut declared_at, diagnostics, program, name, stmt.span);
                         if is_new {
+                            program.const_spans.insert(name.clone(), stmt.span);
                             const_candidates.push((name.clone(), value));
                         }
                     }

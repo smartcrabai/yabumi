@@ -499,8 +499,8 @@ A string-to-number parse failure (`parse_int`/`parse_float`) is not a panic — 
 **Decision**: The concept of a circular-reference error does not exist. Because the declarations of every file in the same directory are registered together, up front, into a single flat namespace at load time before type checking, mutual references work fine as ordinary function calls.
 **SPEC reference**: §10
 
-### D-MOD-04 Automatic inclusion is common to all three commands
-**Decision**: Automatic inclusion of same-directory modules applies to all three of `ybm <file>` / `ybm check <file>` / `ybm test <file>`. §10's mention of `ybm check` merely spells out the additional behavior that "fmt/lint are also run against modules."
+### D-MOD-04 Automatic inclusion is common to all four commands
+**Decision**: Automatic inclusion of same-directory modules applies to the file-based commands `ybm <file>` / `ybm check <file>` / `ybm test <file>`, and to the files analyzed by `ybm lsp`. §10's mention of `ybm check` merely spells out the additional behavior that "fmt/lint are also run against modules."
 **Rationale**: If functions defined in a module could not be called from the entry file's executable statements or from doc tests, the module feature itself would be meaningless. This is corroborated by §13's statement that "the scope of doc tests is the whole file (the entry file plus all declarations of same-directory modules)."
 **SPEC reference**: §10, §13
 

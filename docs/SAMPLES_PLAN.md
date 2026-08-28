@@ -10,7 +10,7 @@ This document is the directory-structure design document for the `.ybm` sample c
 
 - There is no import syntax. A directory is effectively the unit of a module.
 - A module file has the `module` directive (a bare, nameless directive) as its effective first line, after stripping any shebang.
-- Whichever of `ybm <file>` / `ybm check <file>` / `ybm test <file>` is run, it automatically pulls in **all** `.ybm` files with a `module` directive that sit **at the same directory level as the entry file passed in** -- **immediate children only** (it does not recurse into subdirectories, D-MOD-01).
+- Each file-based command (`ybm <file>` / `ybm check <file>` / `ybm test <file>`) automatically pulls in **all** `.ybm` files with a `module` directive that sit **at the same directory level as the entry file passed in** -- **immediate children only** (it does not recurse into subdirectories, D-MOD-01). `ybm lsp` applies the same module discovery when analyzing an open document.
 - A module may contain only declarations (top-level executable statements are forbidden; violating this is E5002).
 - There is a single flat namespace. A name collision is E1001.
 - Writing a `module` directive in the entry file itself normally results in E5002, since it contains executable statements (this is intentional behavior).
@@ -152,7 +152,7 @@ The "Files" column in each table omits `expected.toml` (since it is required in 
 
 | Path | Theme | Files included (role) | SPEC section verified |
 |---|---|---|---|
-| `1_cli_three_subcommands` | Basics of the CLI's 3 subcommands | `entry_main.ybm` | §1 |
+| `1_cli_subcommands` | Basics of the CLI's subcommands | `entry_main.ybm` | §1 |
 | `2_lexical_basics` | shebang, line comments, doc comments, 4-space indentation | `entry_main.ybm` | §2 |
 | `3-1_primitives` | Basic operations on int/float/bool/str; round-trip conversions via `int()`/`float()`/`str()`/`parse_int()`/`parse_float()` (asserting invariants such as `parse_float(str(x)) == x`, based on D-TYPE-14) | `entry_main.ybm`, `entry_conversion_roundtrip.ybm` | §3.1 |
 | `3-2_collections` | list/dict/set/tuple literals, empty collections, single-element tuples; dict/set insertion-order preservation (D-COL-01; asserts the `.entries()`/`.to_list()` order after insert/remove/re-insert) | `entry_literals.ybm`, `entry_edge_cases.ybm` | §3.2 |
@@ -280,7 +280,7 @@ Lists every subsection of SPEC §1-§15 in the left column, with its correspondi
 
 | SPEC Section | Corresponding Samples |
 |---|---|
-| §1 CLI | `ok/1_cli_three_subcommands`, `err/static/1_full_diagnostic_report_ordering`, `err/cli/file_and_extension_errors`, `fmt/idempotency_full_program_and_check_flag_position`, `doctest/check_vs_test_command_difference` |
+| §1 CLI | `ok/1_cli_subcommands`, `err/static/1_full_diagnostic_report_ordering`, `err/cli/file_and_extension_errors`, `fmt/idempotency_full_program_and_check_flag_position`, `doctest/check_vs_test_command_difference` |
 | §2 Lexical | `ok/2_lexical_basics`, `err/static/2_lexical_errors`, `err/static/2_syntax_errors`, `fmt/comment_spacing_normalization`, `fmt/blank_lines_and_trailing_newline` |
 | §3.1 Primitives | `ok/3-1_primitives` |
 | §3.2 Collections | `ok/3-2_collections`, `err/static/3-2_collection_type_errors`, `fmt/trailing_comma_normalization` |

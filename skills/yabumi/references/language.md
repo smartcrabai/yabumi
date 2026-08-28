@@ -289,6 +289,8 @@ def add(a: int, b: int): int
 
 `ybm check` type-checks doc-test blocks. `ybm test` runs each block independently with access to all declarations.
 
+`ybm lsp` starts a JSON-RPC Language Server Protocol server on stdin/stdout. It analyzes open `.ybm` documents without executing them and provides diagnostics, hover, definition, and formatting requests. It accepts no command-line arguments; see the repository's LSP documentation for editor setup.
+
 ## Formatter and lint
 
 `ybm check file.ybm` type-checks, checks formatting without writing, and lints. Use `ybm check --apply file.ybm` when an explicit in-place rewrite is wanted. Any warning exits 1. Avoid:

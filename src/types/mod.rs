@@ -64,6 +64,65 @@ pub enum Ty {
     Unknown,
 }
 
+fn fmt_comma_separated<T: std::fmt::Display>(
+    f: &mut std::fmt::Formatter<'_>,
+    items: impl IntoIterator<Item = T>,
+) -> std::fmt::Result {
+    for (index, item) in items.into_iter().enumerate() {
+        if index > 0 {
+            f.write_str(", ")?;
+        }
+        item.fmt(f)?;
+    }
+    Ok(())
+}
+
+impl std::fmt::Display for Ty {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Int => f.write_str("int"),
+            Self::Float => f.write_str("float"),
+            Self::Bool => f.write_str("bool"),
+            Self::Str => f.write_str("str"),
+            Self::Void => f.write_str("void"),
+            Self::List(inner) => write!(f, "list[{inner}]"),
+            Self::Dict(key, value) => write!(f, "dict[{key}, {value}]"),
+            Self::Set(inner) => write!(f, "set[{inner}]"),
+            Self::Tuple(items) => {
+                f.write_str("tuple[")?;
+                fmt_comma_separated(f, items.iter())?;
+                f.write_str("]")
+            }
+            Self::Named { name, args } => {
+                f.write_str(name)?;
+                if !args.is_empty() {
+                    f.write_str("[")?;
+                    fmt_comma_separated(f, args.iter())?;
+                    f.write_str("]")?;
+                }
+                Ok(())
+            }
+            Self::Function {
+                params,
+                effects,
+                ret,
+            } => {
+                f.write_str("(")?;
+                fmt_comma_separated(f, params.iter())?;
+                write!(f, ") -> {ret}")?;
+                if !effects.is_empty() {
+                    f.write_str(" uses {")?;
+                    fmt_comma_separated(f, effects.names())?;
+                    f.write_str("}")?;
+                }
+                Ok(())
+            }
+            Self::TypeVar(name) => f.write_str(name),
+            Self::Unknown => f.write_str("_"),
+        }
+    }
+}
+
 /// SPEC §8 "granularity is fixed at 6 kinds" -- a closed set, so represented as a
 /// bitflag. No reason to use an open representation such as `HashSet<String>`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -175,7 +234,31 @@ impl NamespaceId {
 
 #[cfg(test)]
 mod tests {
-    use super::{EffectSet, NamespaceId};
+    use std::sync::Arc;
+
+    use super::{EffectSet, NamespaceId, Ty};
+
+    #[test]
+    fn ty_display_formats_nested_types() {
+        let ty = Ty::Dict(Box::new(Ty::Str), Box::new(Ty::List(Box::new(Ty::Int))));
+        assert_eq!(ty.to_string(), "dict[str, list[int]]");
+    }
+
+    #[test]
+    fn ty_display_formats_function_effects() {
+        let ty = Ty::Function {
+            params: vec![
+                Ty::Int,
+                Ty::Named {
+                    name: Arc::from("User"),
+                    args: vec![Ty::Str],
+                },
+            ],
+            effects: EffectSet::FS.union(EffectSet::NET),
+            ret: Box::new(Ty::Bool),
+        };
+        assert_eq!(ty.to_string(), "(int, User[str]) -> bool uses {fs, net}");
+    }
 
     #[test]
     fn effect_set_union_and_subset() {

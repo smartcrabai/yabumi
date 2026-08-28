@@ -118,7 +118,7 @@ The following would be "nice to have" but, in keeping with the zero-dependency-d
 - **The `serde` family**: Not reopened, per the owner's ruling (retaining the judgment that a hand-rolled implementation is more straightforward given its direct coupling to the dynamic `Value` type and to assignment-target-annotation-driven decoding).
 - **`chrono` / `time`**: The formats `time.format`/`time.parse` require are limited to timezone-unaware, `strftime`-style fixed formats (e.g. `%Y-%m-%d %H:%M:%S`), and only UTC is handled (D-STDPOL-06 states "no dedicated type will be added," and the concept of a timezone doesn't exist in SPEC at all). Converting between epoch milliseconds and year/month/day/hour/minute/second is adequately handled by well-known integer arithmetic in the style of Howard Hinnant's `civil_from_days`/`days_from_civil` (Gregorian calendar, including leap-year handling), and requires no timezone database (IANA tzdata) whatsoever. We judged that adding `chrono` (which pulls in `num-traits` etc.) or the `time` crate is not warranted for functionality of this scale, and hand-implement it in `src/stdlib/time.rs` instead (implementation details are settled in Unit 14 of §7.2).
 - **`rand` / `getrandom`**: `rand.*` does not require cryptographic security (SPEC §11.2 explicitly states the `crypto` namespace is out of scope). Mixing seeds from `std::time::SystemTime::now()`, `std::process::id()`, and a local variable's stack address (which varies run to run under ASLR), fed into a small hand-rolled xoshiro256**-family PRNG, satisfies SPEC's requirement — "deterministic within the degenerate interval, otherwise just needs to be type-correct." The `rand` crate itself pulls in an ecosystem of `rand_core`/`rand_chacha`/`zerocopy` etc. as dependencies, which is overkill for a requirement of this scale (implementation details are settled in Unit 14 of §7.2).
-- **`clap`**: There are only three subcommands — `ybm <file>` / `ybm check <file> [--apply]` / `ybm test <file>` — and only one flag, `--apply`. Hand-dispatching on `std::env::args()` is sufficient, and there's no reason to pull in `clap_builder` (and, if using `clap_derive`, `syn`/`quote`/`proc-macro2`).
+- **`clap`**: There are only four subcommands — `ybm <file>` / `ybm check <file> [--apply]` / `ybm test <file>` / `ybm lsp` — and only one flag, `--apply`. Hand-dispatching on `std::env::args()` is sufficient, and there's no reason to pull in `clap_builder` (and, if using `clap_derive`, `syn`/`quote`/`proc-macro2`).
 - **`thiserror` / `anyhow`**: Rust-side internal errors (file I/O errors, TLS errors, regex compile errors, etc.) all need to be converted by each stdlib module into Yabumi's `Error` (`kind`/`message`/`cause`), and since the conversion target is itself a Yabumi-language type, `thiserror`'s `#[derive(Error)]` benefit (automatic `Display`/`std::error::Error` implementations) doesn't apply. A type-erased error like `anyhow::Error` is likewise unneeded, since the conversion target is always the fixed Yabumi `Error` type. The `Diagnostic`/`ErrorCode` designed in §3.1 is adequately handled by a hand-written `enum` + `impl fmt::Display`.
 
 ### 1.7 Finalized Cargo.toml (dependencies section)
@@ -142,8 +142,8 @@ The `tokio` line is removed. `[dev-dependencies]` are settled in §6.3 (crates n
 src/
   main.rs                        — Entry point. Grabs argv → spawns a thread with a dedicated stack size → calls the driver → ExitCode
   cli/
-    mod.rs                       — Subcommand enumeration (Run/Check/Test), bridges to the driver
-    args.rs                      — Hand-written argv parsing (3 subcommands + --apply, position-independent)
+    mod.rs                       — Subcommand enumeration (Run/Check/Test/Lsp), bridges to the driver
+    args.rs                      — Hand-written argv parsing (4 subcommands + --apply, position-independent)
   diagnostics/
     mod.rs                       — Diagnostic, DiagnosticBag, rendering (file:line:col [Exxxx] message)
     codes.rs                     — ErrorCode enum (all D-DIAG-02 codes)
@@ -233,7 +233,14 @@ src/
       csv.rs                          — CSV decode/encode/decode_rows
   doctest/
     mod.rs                          — Execution of extracted `##`-fence results, building a standalone program, pass/fail tallying
-  driver.rs                         — Chains lex→parse→module_resolve→check→effects→lint→(fmt|eval|doctest), determines the exit code
+  lsp/
+    mod.rs                          — JSON-RPC/LSP server, document state, diagnostics, hover, definition, and formatting requests
+    json.rs                         — Minimal JSON parser/serializer used by the protocol
+    pos.rs                          — UTF-16/UTF-32 LSP position conversion
+    query.rs                        — AST queries for hover and definition results
+    transport.rs                    — Content-Length message framing
+    uri.rs                          — File URI/path conversion
+  driver.rs                         — Chains lex→parse→module_resolve→check→effects→lint→(fmt|eval|doctest|LSP), determines the exit code
 ```
 
 ### 2.2 Responsibilities by area (mapping to the required minimum list)
@@ -266,7 +273,7 @@ For each of the 8 areas required by the task, the responsible files in the tree 
 
 **Doc tests** (`doctest/`): Extraction, standalone execution, tallying (§5.10).
 
-**CLI** (`cli/` + `driver.rs`): The 3 subcommands + `--apply` (§4).
+**CLI** (`cli/` + `driver.rs`): The 4 subcommands (`ybm <file>`, `ybm check`, `ybm test`, and `ybm lsp`) + `--apply` (§4). The LSP server uses the shared analysis front end and does not execute source files.
 
 ---
 
@@ -979,8 +986,9 @@ impl NamespaceId {
 }
 
 /// Resolved facts the type-checking phase (part of it being the EffectCheck phase,
-/// see below) leaves behind for downstream phases (evaluator, lint, doctest). The
-/// AST nodes themselves are never modified (§3.4).
+/// see below) leaves behind for downstream phases (evaluator, lint, doctest, and LSP). The
+/// AST nodes themselves are never modified (§3.4). LSP queries consume the resolved facts in this
+/// side table for definition locations and hover results.
 #[derive(Default)]
 pub struct Resolutions {
     /// The declaration-order index of the field a `FieldAccess`/struct-construction `Arg` refers to.
@@ -996,6 +1004,9 @@ pub struct Resolutions {
     /// or an ordinary call (the resolved outcome of the unified Call representation
     /// described in §3.4).
     call_kind: HashMap<NodeId, CallKind>,
+    /// The source span of the declaration resolved for an identifier expression (used by LSP
+    /// definition queries).
+    ident_def: HashMap<NodeId, Span>,
     /// The settled type of each expression (eval generally doesn't consult Ty, but
     /// some built-ins, such as decode, need it).
     expr_ty: HashMap<NodeId, Ty>,
@@ -1302,19 +1313,22 @@ impl Environment {
     pub fn pop_frame(&mut self) { self.frames.pop(); }
 }
 
-/// The single overall program image per `ybm` invocation, settled once
-/// module_resolve completes. Never modified after construction, so it can be safely
-/// shared across `par`'s worker threads as `Arc<Program>` (requiring no interior
-/// mutability or locks whatsoever). Every field is Arc/HashMap<Arc<str>,_>, and even
-/// the identifier fields of the AST-node values themselves (FunctionDecl, etc.) are
-/// Arc<str> (the R1 decision, §8) — so `Program` as a whole is Send+Sync, satisfying
-/// the `F: Send` requirement of `spawn_scoped`, which moves `Arc<Program>` into `par`'s
-/// worker threads.
+/// The single overall program image per `ybm` invocation, with declarations settled once
+/// module_resolve completes and resolution side tables populated by later analysis. Once
+/// analysis has finished, it can be safely shared across `par`'s worker threads as
+/// `Arc<Program>` (requiring no interior mutability or locks whatsoever). LSP analysis retains
+/// this checked image for hover and definition queries. Every field is Arc/HashMap<Arc<str>,_>,
+/// and even the identifier fields of the AST-node values themselves (FunctionDecl, etc.) are
+/// Arc<str> (the R1 decision, §8) — so `Program` as a whole is Send+Sync, satisfying the
+/// `F: Send` requirement of `spawn_scoped`, which moves `Arc<Program>` into `par`'s worker
+/// threads.
 pub struct Program {
     pub functions: HashMap<Arc<str>, Arc<FunctionDecl>>,
     pub structs: HashMap<Arc<str>, Arc<StructDecl>>,
     pub enums: HashMap<Arc<str>, Arc<EnumDecl>>,
     pub consts: HashMap<Arc<str>, Value>,   // Literals only per D-MOD-02, so already evaluated once at load time
+    /// Source spans for module-level constants, used to resolve LSP definition locations.
+    pub const_spans: HashMap<Arc<str>, Span>,
     pub resolutions: Resolutions,
     /// All source files, already settled by the Lex phase. When a panic is detected
     /// inside `par`, we need to be able to reach `SourceMap` even from deep within a
@@ -1332,9 +1346,11 @@ Sequential execution at the top level (the sequence of `Item::Stmt` in the entry
 
 ### 4.1 Overall phase ordering
 
-All three subcommands share Lex → Parse → ModuleResolve → TypeCheck → EffectCheck. `check` and
-`test` then run Lint; plain execution does not, matching SPEC §1's command table. Within each
-phase diagnostics are collected exhaustively, while a failed phase gates every later phase.
+The three file-execution commands (`ybm <file>`, `ybm check`, and `ybm test`) share Lex → Parse →
+ModuleResolve → TypeCheck → EffectCheck. `check` and `test` then run Lint; plain execution does not,
+matching SPEC §1's command table. `ybm lsp` uses the same front end and runs EffectCheck/Lint plus
+virtual doc-fence type checking for open documents, but never executes source. Within each phase
+diagnostics are collected exhaustively, while a failed phase gates every later phase.
 
 ```
 Lex → Parse → ModuleResolve → TypeCheck(+Mutability) → EffectCheck
@@ -1344,6 +1360,7 @@ Lex → Parse → ModuleResolve → TypeCheck(+Mutability) → EffectCheck
   ybm <file>        : Eval
   ybm check <file>  : Lint → type-check doc fences → fmt
   ybm test <file>   : Lint → type-check/run doc fences → tally
+  ybm lsp           : analyze open documents → publish diagnostics; serve hover/definition/fmt
 ```
 
 ### 4.2 Input/output of each phase
@@ -1378,6 +1395,8 @@ Lex → Parse → ModuleResolve → TypeCheck(+Mutability) → EffectCheck
   2. If type checking passes, the fence's statements are executed sequentially against the **same `Program`** (global declarations are shared) but with a **fresh `Environment`** (D-DOC-02: an independent execution context per block). If an `assert` failure or a panic/`?` propagation occurs, it's a `fail` (that `Diagnostic`'s `code`/`line`); if it runs to completion, it's a `pass`.
   The results across all blocks are tallied; if even one `fail` exists, it exits 1, otherwise it exits 0. A summary of pass/fail counts is printed to stdout (SPEC §1: "the pass/fail tally summary for doc tests is printed to stdout"). Each individual `fail`'s `[Exxxx]` diagnostic line itself goes to stderr just like an ordinary diagnostic (D-CLI-01).
 
+**`ybm lsp`**: Starts a JSON-RPC server over stdin/stdout. `didOpen`/`didChange`/`didSave` reanalyze the open document from the unsaved-content overlay and publish diagnostics; `didClose` removes the overlay and clears diagnostics. Hover and definition queries use resolved types and source spans, while formatting returns a single whole-document edit from the canonical formatter. The server advertises full synchronization and UTF-16 positions by default, selecting UTF-32 when advertised by the client. It does not execute source files.
+
 ### 4.4 The exit-code determination rule (summary table)
 
 | Situation | exit code |
@@ -1392,6 +1411,8 @@ Lex → Parse → ModuleResolve → TypeCheck(+Mutability) → EffectCheck
 | `ybm check <file> --apply`: the above plus doc-fence type checking all come back zero and fmt is written in-place | 0 |
 | `ybm test <file>`: every doc block passes | 0 |
 | `ybm test <file>`: one or more doc blocks fail, or the main program's 6 phases fail | 1 |
+| `ybm lsp`: shutdown followed by `exit`, or stdin reaches EOF | 0 |
+| `ybm lsp`: transport failure, or `exit` before `shutdown` | 1 |
 
 Diagnostic ordering (D-CLI-03, "ascending file:line:col") is handled solely by §3.2's `DiagnosticBag::into_sorted` — **as decided in this document**, when spanning multiple files, the file path's lexicographic order is used as the top-priority key (this does not conflict with the expected values in the current samples/, which are overwhelmingly single-file cases).
 
@@ -2044,15 +2065,15 @@ Of these, `#[expect(...)]` is attached only where a warning has actually fired a
 
 ## 7. Implementation phase breakdown
 
-This chapter was written at the point the skeleton was built (Unit 0), to break the implementation into 19 units (Unit 0–18) so that multiple agents could implement it in parallel. **All 19 units are now complete**: across `src/`'s 80 files plus `tests/`'s 5 files (about 36,300 lines total), `cargo build --all-targets` / `cargo clippy --all-targets --all-features -- -D warnings` (including pedantic) / `cargo fmt --all -- --check` / `cargo test --all-features` all succeed (481 passed / 0 failed / 1 ignored — the single `#[ignore]` is due to a relative-path dependency in `src/stdlib/fs.rs` and is unrelated to any incomplete implementation). The acceptance tests under `samples/` (89 directories, 254 files; `run_all_samples` in `tests/samples.rs`, included in `cargo test --all-features` with no `#[ignore]`) also all pass, all 171 cases. Actual `todo!()`s number zero.
+This chapter was written at the point the skeleton was built (Unit 0), to break the implementation into 19 units (Unit 0–18) so that multiple agents could implement it in parallel. **All 19 units are now complete**: across `src/`'s 88 files plus `tests/`'s 5 files (about 39,800 lines total), `cargo build --all-targets` / `cargo clippy --all-targets --all-features -- -D warnings` (including pedantic) / `cargo fmt --all -- --check` / `cargo test --all-features` all succeed (507 passed / 0 failed / 1 ignored — the single `#[ignore]` is due to a relative-path dependency in `src/stdlib/fs.rs` and is unrelated to any incomplete implementation). The acceptance tests under `samples/` (89 directories, 254 files; `run_all_samples` in `tests/samples.rs`, included in `cargo test --all-features` with no `#[ignore]`) also all pass, all 171 cases. Actual `todo!()`s number zero.
 
-This chapter is kept as a record of how the subsequent work (§7.2) actually proceeded, and how the original completion criteria were verified. §7.1 (the file-exclusivity principle) and §7.3 (dependency waves) held up structurally exactly as originally described even as implementation proceeded, so their original text is preserved as-is. Points that changed from the original design during implementation are summarized in §7.4.
+This chapter is kept as a record of how the subsequent work (§7.2) actually proceeded, and how the original completion criteria were verified. §7.3 (dependency waves) held up structurally exactly as originally described even as implementation proceeded, so its original text is preserved as-is. §7.1's original file-exclusivity rule applied to the initial implementation; the later LSP extension added the `src/lsp/` files and the necessary module wiring in Unit 17. Points that changed from the original design during implementation are summarized in §7.4.
 
 ### 7.1 The file-exclusivity principle
 
 So that multiple parallel agents would never edit the same file at the same time, work proceeded under a policy that names exactly one exception up front and otherwise strictly holds to "one file = one unit":
 
-> **Unit 0 (the skeleton, now complete) first created every file under `src/` (every file listed in §2.1's tree) as a stub containing only complete, compiling type definitions and signatures, and also settled `Cargo.toml`'s dependency section and `[[bin]]` targets.** As a result, `pub mod` declarations in a file like `mod.rs` — the kind of file one is tempted to touch every time a new submodule gets added — and declarations of dispatch functions spanning multiple stdlib submodules, as in `stdlib/mod.rs`, **were all written out in full at Unit 0**. No unit after Unit 0 ever edits a `mod.rs`/`main.rs`-equivalent file, nor any file owned by another unit — this constraint, that each unit only needs to fill in the **function bodies** (replacing `todo!()` with real logic) of the files assigned to it, was maintained through to the end.
+> **Unit 0 (the skeleton, now complete) first created every original file under `src/` (every file listed in the then-current §2.1 tree) as a stub containing only complete, compiling type definitions and signatures, and also settled `Cargo.toml`'s dependency section and `[[bin]]` targets.** As a result, `pub mod` declarations in a file like `mod.rs` — the kind of file one is tempted to touch every time a new submodule gets added — and declarations of dispatch functions spanning multiple stdlib submodules, as in `stdlib/mod.rs`, **were all written out in full at Unit 0**. The later LSP extension was the explicit addition to this rule: Unit 17 added the new `lsp/` module and wired it into the existing module declarations and driver. Apart from that extension, no unit after Unit 0 edited a `mod.rs`/`main.rs`-equivalent file, nor any file owned by another unit — the constraint that each unit only needed to fill in the **function bodies** (replacing `todo!()` with real logic) of the files assigned to it was maintained through to the end.
 
 **A correction to Unit 0's completion criteria (a fix made while building the skeleton)**: the previous version had two mutually contradictory sentences in the same paragraph — "the implementation body is filled with `unreachable!()` rather than `todo!()`" and "`todo!()` triggers a runtime panic, so cargo test would fail across the board." The policy actually adopted is **to use `todo!()` exactly as the task instructions direct**, and `cargo test` does not fail across the board — `#[test]` functions are written to verify only the fully implemented types (§3.1-3.9), and no `#[test]` calling a function that still has `todo!()` is written (or, where one exists, it's explicitly disabled with `#[ignore]`). At the skeleton stage there was indeed a state where running `main()` itself, or `run_all_samples` in `tests/samples.rs`, would reach a `todo!()` and panic — but that was the deliberate, intended "declaration that this is not yet implemented," and none of `cargo build`/`cargo clippy`/`cargo fmt --check`/`cargo test` were made to fail by it. Now that every unit is complete, not a single `todo!()` remains — in substance or in comment.
 
@@ -2064,14 +2085,14 @@ Legend: the "Implementation content" column gives representative examples of the
 
 | Unit | Files touched | Implementation content (representative) | Depends on | Completion criteria (status) |
 |---|---|---|---|---|
-| **Unit 0** Skeleton | `Cargo.toml`, every file under `src/`, all 5 files under `tests/` | — (complete) | None | **Done.** `cargo build --all-targets` / `cargo clippy --all-targets --all-features -- -D warnings` (including pedantic) / `cargo fmt --all -- --check` / `cargo test --all-features` all succeed. |
+| **Unit 0** Skeleton | `Cargo.toml`, every original file under `src/`, all 5 files under `tests/` | — (complete) | None | **Done.** `cargo build --all-targets` / `cargo clippy --all-targets --all-features -- -D warnings` (including pedantic) / `cargo fmt --all -- --check` / `cargo test --all-features` all succeed. |
 | **Unit 1** Diagnostics foundation | `src/diagnostics/{mod.rs,codes.rs,source_map.rs}` | `SourceMap::slice` (Position → byte-offset conversion) | 0 | **Done.** `Diagnostic::render`/`DiagnosticBag::into_sorted`/`ErrorCode` (all 53 D-DIAG-02 codes)/`SourceMap::slice` are implemented and the unit tests pass. |
 | **Unit 2** Lexing | `src/lexer/{mod.rs,cursor.rs,fstring.rs}` (`token.rs`/`comments.rs` already complete as types only) | `Cursor::{peek,peek2,bump}`, `scan_fstring`, `Lexer::tokenize` | 1 | **Done.** The unit tests tokenizing `samples/ok/2_lexical_basics`/`6-4_strings` into `Vec<Token>` pass. E0001–E0005 in `samples/err/static/2_lexical_errors`/`2_syntax_errors` come out as expected. Implements the algorithms of §5.1/§5.2. |
 | **Unit 3** AST definitions | `src/ast/{mod.rs,expr.rs,stmt.rs,decl.rs,pattern.rs,ty_ann.rs}` | — (complete) | 0 | **Done.** Every node type (Expr/Stmt/Decl/Pattern/TypeAnn and auxiliary types) is settled down to its fields and compiles. The `NodeId`-assignment policy is documented in a comment in `ast/mod.rs`. |
 | **Unit 4** Parsing | `src/parser/{mod.rs,expr.rs,stmt.rs,decl.rs,pattern.rs,ty_ann.rs,comment_attach.rs}` | `parse_module`, `Parser::{parse_expr,parse_pipe,parse_logical,parse_comparison,parse_arithmetic,parse_unary,parse_postfix,parse_primary,parse_fstring_segments}`, `Parser::{parse_block,parse_stmt,parse_if,parse_match_arm}`, `Parser::{parse_items,parse_function_decl,parse_struct_decl,parse_enum_decl}`, `Parser::{parse_pattern,parse_sub_pattern}`, `Parser::parse_type_ann`, `attach_comments` | 2, 3 | **Done.** Every `.ybm` across all 40 directories under `samples/ok/` parses into a `Module`. `samples/err/static/2_syntax_errors` (E0501–E0503) and `9_par_branch_bare_question_operator` (E0502, D-PAR-03) come out as expected. Includes a table-driven test exhaustively covering the D-OP-01 precedence table. Also verified that exceeding `MAX_PARSE_DEPTH`'s threshold (the R4 decision) emits E0502. Adds `parse_module_with_offset` here, which wasn't in the original plan (see §7.4). |
 | **Unit 5** Module resolution | `src/module_resolve/{mod.rs,flat_namespace.rs,module_grammar.rs}` | `discover_sibling_modules`, `build_program_skeleton`, `register_flat_namespace`, `check_module_toplevel_grammar`, `check_module_directive_syntax` | 3, 4 | **Done.** Every case in `samples/ok/10a`–`10c` and `samples/err/static/10a`–`10d` produces the expected `Program` skeleton, or E1001/E5001/E5002. |
 | **Unit 6** Type foundation (Ty/EffectSet/NamespaceId) | `src/types/mod.rs` | — (complete; though `Ty::Unknown`, described below, is added later by Unit 7) | 3 | **Done.** `Ty`/`EffectSet`/`NamespaceId` are settled down to their fields and derives, and the unit tests for `EffectSet::{union,is_subset_of,from_name}`/`NamespaceId::from_name` pass. |
-| **Unit 7** Type checking | `src/types/{env.rs(part),infer.rs,generics.rs,exhaustiveness.rs,mutability.rs,check_expr.rs,check_stmt.rs,check_decl.rs}` (`resolutions.rs` already complete as types only) | `infer::{unify,infer_with_expected}`, `generics::{instantiate_generics,substitute,check_type_param_operator_usage}`, `exhaustiveness::check_exhaustiveness`, `mutability::{check_mutable_place,check_self_mutation_allowed}`, `check_expr::check_expr`, `check_stmt::{check_stmt,check_block_value,block_diverges}`, `check_decl::{check_function_decl,check_struct_decl,check_enum_decl,check_all_decls}` | 5, 6 | **Done.** Type checking across everything under `samples/ok/` comes back with zero errors (verified via a unit test calling the type-checking phase alone directly). E1xxx/E3001 under `samples/err/static/` (excluding E2xxx/E5xxx) all come out as expected. `Resolutions`'s `field_index`/`decode_target`/`bare_ident_kind`/`call_kind`/`expr_ty`/`implicit_wrap`/`namespace_ref` (excluding `hof_forwarding`) get filled in exactly per the §5.3/D-SYN-06/IMPLICIT-WRAP/NAMESPACE-QUALIFIED decisions. `block_diverges` (the "divergence" determination from §5.6) passes both samples/ok/5b_return_implicit_ok_some_wrap and samples/ok/9_concurrency_par without contradiction. Adds `Ty::Unknown` here, which wasn't in the original plan (see §7.4), and changes `TypeEnv` from a lifetime-carrying linked list to an ownership-based scope stack (see §7.4). |
+| **Unit 7** Type checking | `src/types/{env.rs(part),infer.rs,generics.rs,exhaustiveness.rs,mutability.rs,check_expr.rs,check_stmt.rs,check_decl.rs}` (`resolutions.rs` already complete as types only) | `infer::{unify,infer_with_expected}`, `generics::{instantiate_generics,substitute,check_type_param_operator_usage}`, `exhaustiveness::check_exhaustiveness`, `mutability::{check_mutable_place,check_self_mutation_allowed}`, `check_expr::check_expr`, `check_stmt::{check_stmt,check_block_value,block_diverges}`, `check_decl::{check_function_decl,check_struct_decl,check_enum_decl,check_all_decls}` | 5, 6 | **Done.** Type checking across everything under `samples/ok/` comes back with zero errors (verified via a unit test calling the type-checking phase alone directly). E1xxx/E3001 under `samples/err/static/` (excluding E2xxx/E5xxx) all come out as expected. `Resolutions`'s `field_index`/`decode_target`/`bare_ident_kind`/`call_kind`/`ident_def`/`expr_ty`/`implicit_wrap`/`namespace_ref` (excluding `hof_forwarding`) get filled in exactly per the §5.3/D-SYN-06/IMPLICIT-WRAP/NAMESPACE-QUALIFIED decisions. `block_diverges` (the "divergence" determination from §5.6) passes both samples/ok/5b_return_implicit_ok_some_wrap and samples/ok/9_concurrency_par without contradiction. Adds `Ty::Unknown` here, which wasn't in the original plan (see §7.4), and changes `TypeEnv` from a lifetime-carrying linked list to an ownership-based scope stack (see §7.4). |
 | **Unit 8** Effect checking | `src/effects/mod.rs` | `compute_hof_forwarding`, `infer_effects`, `check_function_effects`, `check_program_effects`, introducing the `ENTRY_POINT_NAME` convention (see §7.4) | 7 | **Done.** `samples/ok/8_effects` (including the EFFECT-HOF-POLYMORPHISM verification via `apply`/`read_len_via_apply`) and `samples/err/static/8_effect_errors` come out as expected. `Resolutions.hof_forwarding` is correctly filled via the two-stage structure (§4.2). |
 | **Unit 9** Lint | `src/lint/{unused_variable.rs,unused_function.rs,shadowing.rs,unreachable.rs,naming.rs}` (`mod.rs`'s `check_all` already wired up) | Each file's `check` (all implemented assuming the `ENTRY_POINT_NAME` convention) | 7 | **Done.** All 5 directories under `samples/err/lint/` come out as expected. |
 | **Unit 10** fmt | `src/fmt/{printer.rs,doc_fence.rs}` (`mod.rs`'s `format_module`/`has_diff` already wired up) | `printer::print_module`, `doc_fence::render_doc_comment` | 3, 4 | **Done.** Byte-for-byte matches before/after formatting across the 10 directories under `samples/fmt/`, `fmt.fmt=fmt` idempotence, read-only `ybm check` diff detection, and explicit `--apply` rewriting all come out as expected. Satisfies D-FMT-06 (doc-fence contents excluded). |
@@ -2081,7 +2102,7 @@ Legend: the "Implementation content" column gives representative examples of the
 | **Unit 14** stdlib (effectful I/O) | `src/stdlib/{fs.rs,http.rs,envns.rs,proc.rs,time.rs,rand.rs,builtins.rs}` | `fs::{read,read_bytes,write,append,list,remove}`, `http::{get,post,put,delete,request}`, `envns::{get,set,args,stdin}`, `proc::run`, `time::{now,sleep,format,parse,days_from_civil,civil_from_days}`, `rand::{Prng::*,int,float,bool_,choice,shuffle}`, `builtins::{print,eprint,assert_bare,assert_with_message}` | 11, 12 | **Done.** `samples/ok/11-2_fs`, `11-2_env`, `11-2_time`, `11-2_rand`, `11-3_builtins_print_eprint_assert` come out as expected. Introduces `ureq`+rustls here. `11-2_http`/`11-2_proc` are verified as acceptance tests only after Unit 18's mocks/fixtures are set up (`tests/support/http_mock.rs`, `tests/fixtures/proc_fixture`), and come out as expected. |
 | **Unit 15** Concurrency | `src/concurrency/mod.rs` (`spawn_par_branch` already wired up) | `eval_par_list`, `eval_par_map` | 11 | **Done.** `samples/ok/9_concurrency_par` and `samples/err/runtime/par_panic_aborts_immediately` (verifying stdout is completely empty, the PAR-ABORT-NOT-ACTUALLY-IMMEDIATE decision) come out as expected. Confirmed that completion-order reception via the mpsc channel plus `process::exit(1)` on the first Abort combines correctly with `spawn_par_branch`. |
 | **Unit 16** Doctest | `src/doctest/mod.rs` (`run_all_fences` already wired up) | `run_fence`, `safe_fence_id_base` (a regression countermeasure paired with §7.4's `parse_module_with_offset`) | 7, 11 | **Done.** All 6 directories under `samples/doctest/` come out as expected. The concern that `NodeId`s reassigned by the fence-dedicated Parser might collide with real declarations' `NodeId`s is resolved via `safe_fence_id_base` (verified by the regression test `fence_larger_than_declaration_does_not_corrupt_resolutions`). |
-| **Unit 17** CLI / driver | `src/cli/{mod.rs,args.rs}`, `src/driver.rs` (`src/main.rs` already wired up — the dedicated 64MiB-stack thread launch + join + ExitCode determination is implemented) | `parse_args`, `cli::dispatch`, `driver::run_pipeline` (settling the actual call order: collect_fences → build_program_skeleton → prelude::install → check_program → merging pseudo_consts → effects/lint → eval) | 2,4,5,7,8,9,10,11,12,13,14,15,16 (every unit) | **Done.** The 3 subcommands (`ybm <file>`/`ybm check [--apply] <file>`/`ybm test <file>`) plus the read-only `check` default and explicit `--apply` rewrite behave exactly per §4's pipeline, and the exit code is decided exactly per §4.4's table. `samples/ok/1_cli_three_subcommands`, `12_fmt_lint_clean_baseline`, `15_end_to_end_showcase`, and `samples/err/cli/file_and_extension_errors` come out as expected. |
+| **Unit 17** CLI / driver / LSP | `src/cli/{mod.rs,args.rs}`, `src/driver.rs`, `src/lsp/` (`src/main.rs` already wired up — the dedicated 64MiB-stack thread launch + join + ExitCode determination is implemented) | `parse_args`, `cli::dispatch`, `driver::run_pipeline`, `driver::analyze`, and the LSP JSON-RPC server | 2,4,5,7,8,9,10,11,12,13,14,15,16 (every unit) | **Done.** The 4 subcommands (`ybm <file>`/`ybm check [--apply] <file>`/`ybm test <file>`/`ybm lsp`) plus the read-only `check` default, explicit `--apply` rewrite, and stdio LSP server behave per §4. The LSP uses the shared front end for diagnostics, hover, definition, and formatting without executing source. `samples/ok/1_cli_subcommands`, `12_fmt_lint_clean_baseline`, `15_end_to_end_showcase`, and `samples/err/cli/file_and_extension_errors` cover the file-based commands. |
 | **Unit 18** Acceptance-test harness | `tests/samples.rs`, `tests/support/{mod.rs,http_mock.rs,toml_lite.rs}` (`tests/fixtures/proc_fixture/main.rs` and the in-harness `spawn_mock_http_server` already complete) | `run_case`, `support::discover_sample_dirs`, `toml_lite::parse_expected_toml`, `http_mock::handle_one` | 0 (activated once Unit 17 is complete) | **Done.** The harness is implemented exactly per §6.1/6.2's design, and `run_all_samples` carries no `#[ignore]`, running as part of the ordinary `cargo test --all-features` invocation and verifying every expectation across the 89 directories, 254 files, and 171 cases under `samples/` — all green (the original plan's approach of "remove `#[ignore]` and run via `-- --ignored`" was not adopted; it settled instead into simply running unconditionally). |
 
 ### 7.3 Dependency waves (a guide to parallelization)
@@ -2099,7 +2120,7 @@ Grouping each unit by "the earliest point at which it could start, once all of i
 | 6 | Unit 8 (effect checking), Unit 9 (lint), Unit 11 (evaluator core) | 7 (11 also depends on 5, 6) |
 | 7 | Unit 12 (stdlib pure portion), Unit 15 (concurrency), Unit 16 (doctest) | 11 (16 also depends on 7) |
 | 8 | Unit 13 (stdlib codec), Unit 14 (stdlib effectful I/O) | 11, 12 |
-| 9 | Unit 17 (CLI/driver) | All of 2,4,5,7,8,9,10,11,12,13,14,15,16 |
+| 9 | Unit 17 (CLI/driver/LSP) | All of 2,4,5,7,8,9,10,11,12,13,14,15,16 |
 
 Unit 18 can be started in wave 1, but `tests/samples.rs` doesn't actually go all green until Unit 17 (wave 9) is complete — this "execution verification" is the sole final convergence point waiting on every unit, while every other unit's startability is determined purely by the local dependencies in the table above. Waves 2, 4, 6, 7, and 8 each allow 2–3 units in parallel, so the maximum degree of parallelism is roughly 3.
 

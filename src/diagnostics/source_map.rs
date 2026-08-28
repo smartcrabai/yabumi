@@ -134,6 +134,11 @@ impl SourceMap {
         self.file(id).path()
     }
 
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.files.len()
+    }
+
     /// Cuts out the text fragment that `span` points to (used when the one-argument form of
     /// assert automatically cuts out and displays a portion of the source text, STDLIB.md
     /// §13).

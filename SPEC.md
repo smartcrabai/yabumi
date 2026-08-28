@@ -1,53 +1,55 @@
-# Yabumi 言語仕様
+# Yabumi Language Specification
 
-Agent Skills(SKILL.md 同梱スクリプト)向けの単一ファイル完結スクリプト言語。LLM が bash/python 代替として記述することを想定する。
+A self-contained single-file scripting language for Agent Skills (SKILL.md bundled scripts), intended for LLMs as a bash/python alternative.
 
-設計優先度: **依存ゼロ配布 > 機械可読エラー > 一発で正しく書ける > 権限監査**。
-全体思想: **「見た目 = 挙動」** — 暗黙動作を排除し、並行・可変・エラー伝播をすべて構文上で可視化する。
+Design priorities: **zero-dependency distribution > machine-readable errors > correct on the first try > permission auditing**.
+Overall philosophy: **"appearance = behavior"** - eliminate implicit behavior and make concurrency, mutability, and error propagation visible in syntax.
 
 ---
 
 ## 1. CLI
 
-サブコマンドは3つのみ。
+There are exactly four subcommands.
 
-| コマンド | 動作 |
+| Command | Behavior |
 |---|---|
-| `ybm <file>` | 型チェック実行後、成功時のみ実行 |
-| `ybm check <file>` | 型チェック + fmt差分確認(書き換えなし)+ lint。docテストブロックの型チェックも行う(実行はしない) |
-| `ybm test <file>` | docテストを実行 |
+| `ybm <file>` | Run type checking, then execute only on success |
+| `ybm check <file>` | Type check + fmt diff check (no rewrite) + lint. Also type-check doc-test blocks (do not execute them) |
+| `ybm test <file>` | Run doc tests |
+| `ybm lsp` | Start a Language Server Protocol server on stdin/stdout. Analyze open files but do not execute them |
 
-- `ybm check --apply <file>`: fmtを書き換える。`--apply` なしではfmtを書き換えず、差分を表示する
-- exit code: 成功 = 0。型エラー・lint 警告・fmt 差分(デフォルトcheck時)・テスト失敗・実行時 Err 終了 = 1
-- 診断形式: `file:line:col [E0000] message`。エラーコードは安定(機械可読)
+- `ybm check --apply <file>`: Rewrite with fmt. Without `--apply`, do not rewrite and show the diff
+- `ybm lsp` takes no additional command-line arguments; see [`docs/LSP.md`](./docs/LSP.md) for detailed features and client configuration
+- Exit code: success = 0. Type errors, lint warnings, fmt diffs (during the default check), test failures, and runtime Err termination = 1. LSP exits 0 on normal shutdown or stdin EOF, and 1 on communication errors or exit before shutdown
+- Diagnostic format: `file:line:col [E0000] message`. Error codes are stable and machine-readable
 
-## 2. 字句
+## 2. Lexical Rules
 
-- 拡張子: `.ybm`
-- shebang: 1行目の `#!/usr/bin/env ybm` を許容(無視して実行)
-- コメント: `#` 行コメントのみ。ブロックコメントなし
-- doc コメント: 宣言直前の `##`
-- **ブロックはインデントのみ**。行末コロンは全廃。インデントはスペース4固定、タブは構文エラー
-- エンコーディング: UTF-8
+- Extension: `.ybm`
+- Shebang: allow `#!/usr/bin/env ybm` on the first line (ignore it during execution)
+- Comments: `#` line comments only. No block comments
+- Doc comments: `##` immediately before a declaration
+- **Blocks use indentation only**. Trailing colons are forbidden. Indentation is exactly 4 spaces; tabs are syntax errors
+- Encoding: UTF-8
 
-## 3. 型システム
+## 3. Type System
 
-静的型付け。名前的型付け(構造的部分型なし)。継承・trait なし。
+Statically typed. Nominal typing (no structural subtyping). No inheritance or traits.
 
-### 3.1 プリミティブ(小文字)
+### 3.1 Primitives (lowercase)
 
-| 型 | 実体 |
+| Type | Representation |
 |---|---|
 | `int` | i64 |
 | `float` | f64 |
 | `bool` | true / false |
-| `str` | UTF-8、不変 |
+| `str` | UTF-8, immutable |
 
-任意精度整数・decimal はなし。
+No arbitrary-precision integers or decimal type.
 
-### 3.2 コレクション
+### 3.2 Collections
 
-`list[T]` / `dict[K, V]` / `set[T]` / `tuple[A, B, ...]`。リテラルは Python 風:
+`list[T]` / `dict[K, V]` / `set[T]` / `tuple[A, B, ...]`. Literals are Python-like:
 
 ```
 xs = [1, 2, 3]
@@ -56,18 +58,18 @@ s = {1, 2}
 t = (1, "a")
 ```
 
-### 3.3 stdlib 型(大文字)
+### 3.3 stdlib Types (uppercase)
 
-`Result[T, E]` / `Option[T]` / `Error` / `Value`。
+`Result[T, E]` / `Option[T]` / `Error` / `Value`.
 
-### 3.4 型注釈の必須範囲
+### 3.4 Required Type Annotations
 
-- 関数シグネチャ(引数・戻り値)は**必須**
-- ローカル変数は推論。推論不能箇所(空コレクション等)は注釈要求: `xs: list[int] = []`
+- Function signatures (arguments and return values) are **required**
+- Local variables are inferred. Require annotations where inference is impossible (such as empty collections): `xs: list[int] = []`
 
 ### 3.5 struct / enum
 
-struct 内にメソッド同居。フィールド単位の可変性指定はなし(束縛の `var` に従属)。
+Methods live inside structs. Mutability is not specified per field; it follows the binding's `var`.
 
 ```
 struct User
@@ -82,56 +84,56 @@ enum Shape
     Rect(w: float, h: float)
 ```
 
-コンストラクタは**名前付き引数必須**(位置引数不可): `User(name: "a", age: 3)`
+Constructors require **named arguments** (positional arguments are not allowed): `User(name: "a", age: 3)`
 
-### 3.6 ジェネリクス
+### 3.6 Generics
 
-ユーザー定義可。`[T]` 記法。
+User-defined generics are supported. Use `[T]` notation.
 
 ```
 def first[T](xs: list[T]): Option[T]
     return xs.get(0)
 ```
 
-## 4. 変数と可変性
+## 4. Variables and Mutability
 
-- **不変デフォルト**。再代入・フィールド変更には `var` 宣言が必要
-- 型は初回束縛で固定
+- **Immutable by default**. Reassignment and field changes require a `var` declaration
+- The type is fixed at the first binding
 
 ```
-x = 5          # 不変。x = 6 は型エラー
-var y = 5      # 可変。y = 6 OK
+x = 5          # Immutable. x = 6 is a type error
+var y = 5      # Mutable. y = 6 is OK
 var u = User(name: "a", age: 3)
-u.age = 4      # var 束縛なので OK
+u.age = 4      # OK because the binding is var
 ```
 
-## 5. 関数
+## 5. Functions
 
-main 関数なし。トップレベルから上から実行される。
+There is no main function. Execution proceeds top to bottom from the top level.
 
 ```
 def fetch(url: str): Result[str, Error] uses {net}
     return http.get(url)?.body
 ```
 
-- 戻り値注釈は `:`(`->` ではない)
-- effect は `uses {..}` で宣言(§8)
-- 関数型の表記: `(int) -> str uses {net}`(型文脈では `->`)
+- Return annotations use `:` (not `->`)
+- Declare effects with `uses {..}` (see section 8)
+- Function type syntax: `(int) -> str uses {net}` (`->` is used in type contexts)
 
-### 5.1 ラムダ
+### 5.1 Lambdas
 
-JS 風無名関数。**括弧必須・単一式のみ**(複数文は `def` に切り出す)。引数型は文脈推論、注釈も可。
+JS-like anonymous functions. **Parentheses are required and only one expression is allowed** (extract multiple statements into a `def`). Argument types are inferred from context; annotations are also allowed.
 
 ```
 xs.map((x) => x * 2)
 xs.filter((x: int) => x > 3)
 ```
 
-## 6. 式
+## 6. Expressions
 
-### 6.1 式指向
+### 6.1 Expression-Oriented Constructs
 
-if / match は値を返す式。三項演算子なし。
+if / match are expressions that return values. No ternary operator.
 
 ```
 label = if score > 80
@@ -144,158 +146,158 @@ area = match shape
     Rect(w, h) => w * h
 ```
 
-- match アームは `=>`。複数文アームは `=>` 後改行 + インデント
-- enum の match は**網羅性チェック**あり
+- Match arms use `=>`. For multiple-statement arms, put a newline and indentation after `=>`
+- enum matches require **exhaustiveness checking**
 
-### 6.2 イテレータ(eager)
+### 6.2 Iterators (eager)
 
-メソッドチェーン方式。内包表記はなし。`xs.map(f)` は即 `list[U]` を返す(`Iterator[T]` 型は存在しない)。
+Use method chains. No comprehensions. `xs.map(f)` immediately returns `list[U]` (there is no `Iterator[T]` type).
 
-メソッド語彙は Rust 風: `map / filter / fold / find / any / all / count / sum / enumerate / zip / rev / take / skip / flat_map / sort_by / chain` 等。
+Method vocabulary is Rust-like: `map / filter / fold / find / any / all / count / sum / enumerate / zip / rev / take / skip / flat_map / sort_by / chain`, and so on.
 
-### 6.3 パイプ
+### 6.3 Pipes
 
-`|>`。優先順位最低・左結合。
+`|>`. Lowest precedence and left-associative.
 
-- 単項関数は裸名 OK: `x |> json.encode`
-- 引数ありは `_` プレースホルダ**必須**: `x |> fs.write("out.json", _)`
-- 暗黙の第1引数挿入は**なし**
-- ステージ後置 `?` 可: `x |> parse? |> validate?`。パイプ自体は Result を自動短絡しない
-- fmt は長いパイプを1ステージ1行に整形
+- A unary function may use a bare name: `x |> json.encode`
+- Functions with arguments **require** the `_` placeholder: `x |> fs.write("out.json", _)`
+- There is **no** implicit insertion of the first argument
+- A stage may have a trailing `?`: `x |> parse? |> validate?`. Pipes themselves do not automatically short-circuit Results
+- fmt formats long pipes as one stage per line
 
-### 6.4 文字列
+### 6.4 Strings
 
 - f-string: `f"count: {n}"`
-- 連結: `+`
-- 比較は構造等価 `==` のみ。参照等価なし
+- Concatenation: `+`
+- Comparison uses only structural equality `==`. No reference equality
 
-## 7. エラー処理
+## 7. Error Handling
 
-### 7.1 Error 型
+### 7.1 Error Type
 
-組み込み単一 `Error` 型を stdlib 全体で統一使用:
+The entire stdlib uses one built-in `Error` type:
 
 ```
 struct Error
-    kind: str            # "net" | "fs" | "decode" | ... ユーザー定義も自由
+    kind: str            # "net" | "fs" | "decode" | ... user-defined kinds are also allowed
     message: str
     cause: Option[Error]
 ```
 
-`?` は型変換なしで貫通する(Rust の From 変換地獄を排除)。
+`?` propagates without type conversion (avoiding Rust's `From` conversion maze).
 
-### 7.2 `?` 演算子
+### 7.2 The `?` Operator
 
-- `Result` / `Option` 両対応(Rust 同様、戻り型が一致する関数内で使用可)
-- トップレベルでの `?`: Err 時に stderr へエラー表示 + exit 1
+- Supports both `Result` and `Option` (as in Rust, usable inside functions with a matching return type)
+- Top-level `?`: print the error to stderr and exit 1 on Err
 
-### 7.3 Result 無視の禁止
+### 7.3 Ignoring Results Is Forbidden
 
-Result 戻り値を使わない = **型エラー**。明示破棄は `_ = f()`。
+Unused Result return values are a **type error**. Explicitly discard one with `_ = f()`.
 
-### 7.4 panic 排除
+### 7.4 No Panics
 
-catch 可能な panic は存在しない。範囲外アクセス・ゼロ除算・整数オーバーフローは**即プロセス異常終了**(exit 1 + トレース表示、捕捉不可)。安全版 API を併設:
+There are no catchable panics. Out-of-bounds access, division by zero, and integer overflow cause **immediate process termination** (exit 1 with a trace; not catchable). Safe APIs are provided:
 
-- `xs[i]` → 範囲外で即終了 / `xs.get(i): Option[T]`
-- `a / b` → ゼロ除算で即終了 / `math.checked_div(a, b): Option[int]`
+- `xs[i]` -> terminate immediately out of bounds / `xs.get(i): Option[T]`
+- `a / b` -> terminate immediately on division by zero / `math.checked_div(a, b): Option[int]`
 
 ### 7.5 assert
 
-組み込み `assert(cond, msg)`。失敗で exit 1。docテストの主要検証手段。
+Built-in `assert(cond, msg)`. Failure exits 1. This is the primary verification tool for doc tests.
 
-## 8. Effect システム
+## 8. Effect System
 
-**静的検査のみ**(実行時強制なし)。粒度は6種固定:
+**Static checking only** (no runtime enforcement). There are exactly six effect kinds:
 
 `fs, net, env, proc, time, rand`
 
-- stdin 読み取りは `env` に含む
-- `print` / `eprint` は effect 不要(純粋関数内でもデバッグ出力可)
-- effect 宣言なし関数 = 純粋関数。純粋関数から effect 関数を呼ぶと**型エラー**
-- トップレベルは全 effect 暗黙許可
-- 高階関数: 関数型引数の effect は**暗黙伝播**(チェッカ内部で effect row を推論。ユーザーが effect 変数を書くことはない)
+- Reading stdin is included in `env`
+- `print` / `eprint` require no effect (debug output is allowed in pure functions)
+- A function without an effect declaration is pure. Calling an effectful function from a pure function is a **type error**
+- All effects are implicitly allowed at the top level
+- Higher-order functions: effects of function arguments **propagate implicitly** (the checker infers the effect row internally; users do not write effect variables)
 
 ```
 def map[T, U](xs: list[T], f: (T) -> U): list[U]
-    # f が {net} を持てば map(xs, f) の呼び出し元にも {net} が要求される
+    # If f has {net}, callers of map(xs, f) also require {net}
 ```
 
-## 9. 並行実行
+## 9. Concurrent Execution
 
-- IO は構文上の async/await なし。内部非同期・呼び出し点で暗黙待機(CPU をブロックしない)
-- 並行は**明示コンストラクトのみ**。暗黙並行なし
+- IO has no syntactic async/await. It is internally asynchronous and implicitly awaited at the call site (without blocking the CPU)
+- Concurrency uses **explicit constructs only**. No implicit concurrency
 
-| 構文 | 型 | 用途 |
+| Syntax | Type | Use |
 |---|---|---|
-| `par [f(), g()]` | `list[T]`(全要素同型) | 固定個数・同種 |
-| `par (f(), g())` | `tuple[A, B]` | 固定個数・異種 |
-| `xs.par_map((x) => ...)` | `list[U]` | 動的コレクション |
-| `xs.par_each((x) => ...)` | なし | 副作用のみ |
+| `par [f(), g()]` | `list[T]` (all elements have the same type) | Fixed count, homogeneous |
+| `par (f(), g())` | `tuple[A, B]` | Fixed count, heterogeneous |
+| `xs.par_map((x) => ...)` | `list[U]` | Dynamic collection |
+| `xs.par_each((x) => ...)` | None | Side effects only |
 
-- fail-fast なし。**全完走**を待つ。要素が `Result` ならそのまま `list[Result[T, E]]` で受ける
-- クロージャキャプチャは値コピー。par 枝間の共有可変状態なし
-- ランタイム: マルチスレッド(CPU 並列あり)
+- No fail-fast. **Wait for all tasks to finish**. If elements are `Result`, receive them as `list[Result[T, E]]`
+- Closure captures are copied by value. No shared mutable state exists between par branches
+- Runtime: multithreaded (CPU parallelism supported)
 
 ```
 results = par [fetch(url1), fetch(url2)]
 pages = urls.par_map((u) => http.get(u))
 ```
 
-## 10. モジュール
+## 10. Modules
 
-- import 構文なし。パッケージ概念なし
-- モジュールファイルは**1行目に `module`** directive を書く
-- エントリファイル(`ybm` に渡すファイル)と**同階層**の directive 付き `.ybm` が**自動で全部**取り込まれる
-- 名前空間分離なし(単一フラット名前空間)。名前衝突 = 型エラー
-- モジュールは**宣言のみ**(def / struct / enum / 定数)。トップレベル実行文は禁止(取り込み順で挙動が変わる問題を根絶)
-- `ybm check` は同階層モジュールをまとめて検査・fmt・lint
+- No import syntax. No package concept
+- A module file must have a `module` directive on the **first line**
+- All `.ybm` files with a directive in the **same directory** as the entry file (the file passed to `ybm`) are **automatically** included
+- No namespace separation (one flat namespace). Name collisions are type errors
+- Modules contain **declarations only** (def / struct / enum / constants). Top-level executable statements are forbidden (eliminating order-dependent behavior)
+- `ybm check` checks, formats, and lints all modules in the same directory together
 
-## 11. 標準ライブラリ
+## 11. Standard Library
 
-import 不要の組み込み名前空間。
+Built-in namespaces that require no import.
 
-### 11.1 codec(4形式)
+### 11.1 codec (4 Formats)
 
-`json` / `csv` / `yaml` / `toml`(XML・JSON5 は対象外)。
+`json` / `csv` / `yaml` / `toml` (XML and JSON5 are out of scope).
 
-- decode は**代入先注釈駆動**: `data: User = json.decode(s)?`
+- decode is **driven by the destination annotation**: `data: User = json.decode(s)?`
 - encode: `json.encode(value): str`
-- CSV: `csv.decode[T](s): Result[list[T], Error]`。T はフラット struct、1行目ヘッダと名前マッチ
-- YAML: 安全サブセット(アンカー / エイリアス / マルチドキュメント非対応)
-- スキーマ未知データ用に動的 `Value` 型を併設(全 codec 共通)
+- CSV: `csv.decode[T](s): Result[list[T], Error]`. T is a flat struct; names match the first-row header
+- YAML: safe subset (anchors, aliases, and multi-document input are unsupported)
+- A dynamic `Value` type is provided for data with unknown schemas (shared by all codecs)
 
-### 11.2 モジュール一覧
+### 11.2 Module List
 
-| 名前空間 | 内容 | effect |
+| Namespace | Contents | Effect |
 |---|---|---|
 | `fs` | read / write / append / list / exists / remove | `fs` |
-| `http` | client のみ: get / post / put / delete、headers、timeout、body | `net` |
+| `http` | Client only: get / post / put / delete, headers, timeout, body | `net` |
 | `env` | get / set / args / stdin | `env` |
-| `proc` | コマンド実行、stdout / stderr / exit code 取得 | `proc` |
+| `proc` | Run commands; retrieve stdout / stderr / exit code | `proc` |
 | `time` | now / sleep / format / parse | `time` |
-| `rand` | 乱数 | `rand` |
-| `regex` | 正規表現 | なし(純粋) |
-| `math` | 数学関数、checked 系 | なし(純粋) |
+| `rand` | Random numbers | `rand` |
+| `regex` | Regular expressions | None (pure) |
+| `math` | Math functions and checked operations | None (pure) |
 
-http server / sqlite / crypto は対象外。
+HTTP server / sqlite / crypto are out of scope.
 
-### 11.3 組み込み関数
+### 11.3 Built-in Functions
 
-`print` / `eprint`(stderr)/ `assert(cond, msg)`。log レベル機構なし。
+`print` / `eprint` (stderr) / `assert(cond, msg)`. No log-level mechanism.
 
 ## 12. fmt / lint
 
-- fmt: `ybm check --apply` で in-place 書き換え(gofmt 流)。`ybm check` は差分確認のみ。冪等(fmt∘fmt = fmt)
-- lint ルール: 未使用変数 / 未使用関数 / シャドーイング / 到達不能コード / 命名規約(snake_case 変数・関数、PascalCase 型)
-- lint 警告ありも exit 1(「check が通る = 綺麗」の単純規範)
+- fmt: `ybm check --apply` rewrites in place (gofmt style). `ybm check` only checks the diff. Idempotent (fmt o fmt = fmt)
+- Lint rules: unused variables / unused functions / shadowing / unreachable code / naming conventions (snake_case variables and functions, PascalCase types)
+- Lint warnings also exit 1 (the simple convention that "passing check = clean")
 
-## 13. doc テスト
+## 13. Doc Tests
 
-`##` doc コメント内の ``` フェンスブロックがテスト。
+Fenced ``` blocks inside `##` doc comments are tests.
 
 ```
-## 2つの int を加算する。
+## Add two ints.
 ##
 ## ```
 ## assert(add(1, 2) == 3)
@@ -304,18 +306,18 @@ def add(a: int, b: int): int
     return a + b
 ```
 
-- 実行は `ybm test <file>`。`ybm check` は型チェックのみ行う(実行しない)
-- 各ブロックは独立プログラムとして実行。スコープはファイル全体(エントリ + 同階層モジュールの全宣言)
-- effect 制限なし(トップレベル同等)
-- `assert` 失敗 or Err での異常終了 = fail。ブロック単位で pass/fail 集計、1つでも fail なら exit 1
+- Run with `ybm test <file>`. `ybm check` only type-checks (it does not execute)
+- Run each block as an independent program. Its scope is the entire file (the entry file plus all declarations from same-directory modules)
+- No effect restrictions (equivalent to the top level)
+- An `assert` failure or abnormal termination from Err means fail. Aggregate pass/fail per block; exit 1 if any block fails
 
-## 14. メモリモデル
+## 14. Memory Model
 
-- GC なし。**値セマンティクス + スコープ RAII**
-- 実装は参照カウント(Arc + copy-on-write)。所有権・借用の概念はユーザーに露出しない
-- 「GC なし」は実装特性であり、ユーザーが所有権エラーに遭遇することはない
+- No GC. **Value semantics + scope RAII**
+- The implementation uses reference counting (Arc + copy-on-write). Ownership and borrowing are not exposed to users
+- "No GC" is an implementation detail; users never encounter ownership errors
 
-## 15. サンプル
+## 15. Example
 
 ```
 #!/usr/bin/env ybm

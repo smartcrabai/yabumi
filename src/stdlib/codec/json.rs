@@ -355,7 +355,7 @@ fn write_value(value: &Value, out: &mut String) {
     }
 }
 
-fn write_json_string(s: &str, out: &mut String) {
+pub(crate) fn write_json_string(s: &str, out: &mut String) {
     use std::fmt::Write as _;
     out.push('"');
     for c in s.chars() {
