@@ -1089,12 +1089,14 @@ mod tests {
     fn rejects_malformed_feature_request_parameters() {
         let messages = [
             request(1, "textDocument/hover", Json::Null),
-            request(2, "textDocument/formatting", Json::obj(vec![
-                (
+            request(
+                2,
+                "textDocument/formatting",
+                Json::obj(vec![(
                     "textDocument",
                     Json::obj(vec![("uri", Json::Str("file:///tmp/open.ybm".to_owned()))]),
-                ),
-            ])),
+                )]),
+            ),
             request(3, "shutdown", Json::Null),
             notification("exit", Json::Null),
         ];
