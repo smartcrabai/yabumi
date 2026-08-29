@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#08090b">
+  <meta name="description" content="Yabumi is a self-contained scripting language for Agent Skills: explicit effects, typed errors, visible concurrency, one binary.">
+  <title>Yabumi — Documentation</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #08090b;
+      --panel: #0e1013;
+      --raised: #15181c;
+      --line: #252930;
+      --line-strong: #363c45;
+      --text: #f4f5f2;
+      --muted: #9ca3a9;
+      --faint: #686f77;
+      --signal: #ff5b45;
+      --signal-soft: #2e1716;
+      --code-blue: #82c7ff;
+      --code-gold: #edcc78;
+      --header: 58px;
+      --sidebar: 252px;
+      --content: 760px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-padding-top: calc(var(--header) + 28px); }
+    body {
+      margin: 0;
+      background: var(--ink);
+      color: var(--text);
+      font: 15px/1.7 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    a { color: inherit; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+    a:hover { color: #fff; text-decoration-color: var(--signal); }
+    :focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; border-radius: 3px; }
+
+    .skip-link {
+      position: fixed;
+      z-index: 100;
+      top: 10px;
+      left: 10px;
+      padding: 8px 12px;
+      background: var(--text);
+      color: var(--ink);
+      transform: translateY(-150%);
+    }
+    .skip-link:focus { transform: translateY(0); }
+
+    header {
+      position: fixed;
+      z-index: 20;
+      inset: 0 0 auto;
+      height: var(--header);
+      border-bottom: 1px solid var(--line);
+      background: color-mix(in srgb, var(--ink) 92%, transparent);
+      backdrop-filter: blur(14px);
+    }
+
+    .header-inner {
+      max-width: 1440px;
+      height: 100%;
+      margin: auto;
+      padding: 0 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      font: 700 13px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      letter-spacing: .14em;
+    }
+    .brand-mark { width: 24px; height: 24px; color: var(--signal); }
+    .brand small {
+      color: var(--faint);
+      font: 600 10px/1 ui-sans-serif, sans-serif;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .top-nav { display: flex; align-items: center; gap: 26px; }
+    .top-nav a {
+      color: var(--muted);
+      font-size: 13px;
+      text-decoration: none;
+    }
+    .top-nav a[aria-current="page"] { color: var(--text); }
+    .github-link {
+      padding: 7px 12px;
+      border: 1px solid var(--line-strong);
+      border-radius: 7px;
+      color: var(--text) !important;
+    }
+
+    aside {
+      position: fixed;
+      z-index: 10;
+      top: var(--header);
+      bottom: 0;
+      width: var(--sidebar);
+      padding: 30px 20px 42px;
+      overflow-y: auto;
+      border-right: 1px solid var(--line);
+      background: var(--ink);
+      scrollbar-width: thin;
+    }
+    aside nav { display: grid; gap: 4px; }
+    .nav-label {
+      margin: 18px 10px 7px;
+      color: var(--faint);
+      font: 700 10px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    aside .nav-label:first-child { margin-top: 0; }
+    aside a {
+      padding: 6px 10px;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+      text-decoration: none;
+    }
+    aside a:hover { background: var(--raised); color: var(--text); }
+    .nav-primary { color: var(--text) !important; background: var(--raised); }
+
+    .mobile-nav { display: none; }
+
+    main {
+      min-height: 100vh;
+      margin-left: var(--sidebar);
+      padding: calc(var(--header) + 62px) clamp(28px, 6vw, 96px) 100px;
+    }
+    .content { width: min(100%, var(--content)); margin: 0 auto; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 18px;
+      color: var(--signal);
+      font: 700 11px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before { content: ""; width: 22px; border-top: 1px solid currentColor; }
+
+    h1, h2, h3 { margin-top: 0; line-height: 1.15; letter-spacing: -.035em; }
+    h1 { max-width: 700px; margin-bottom: 20px; font-size: clamp(42px, 7vw, 76px); }
+    h2 { margin-bottom: 18px; font-size: clamp(27px, 4vw, 36px); }
+    h3 { margin-bottom: 10px; font-size: 18px; letter-spacing: -.02em; }
+    p { margin: 0 0 18px; color: var(--muted); }
+    strong { color: var(--text); }
+
+    .lede { max-width: 660px; font-size: 19px; line-height: 1.6; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 30px 0 36px; }
+    .button {
+      display: inline-flex;
+      min-height: 42px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 16px;
+      border: 1px solid var(--line-strong);
+      border-radius: 7px;
+      background: var(--raised);
+      font-weight: 650;
+      text-decoration: none;
+    }
+    .button-primary { border-color: var(--signal); background: var(--signal); color: #180604; }
+    .button-primary:hover { color: #180604; filter: brightness(1.08); }
+
+    .terminal {
+      position: relative;
+      margin: 0 0 48px;
+      overflow: hidden;
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      background: #0b0d10;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, .34);
+    }
+    .terminal::after {
+      content: "";
+      position: absolute;
+      top: 40px;
+      bottom: 0;
+      left: 51px;
+      border-left: 1px solid color-mix(in srgb, var(--signal) 45%, transparent);
+    }
+    .terminal-bar {
+      height: 39px;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      border-bottom: 1px solid var(--line);
+      color: var(--faint);
+      font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--line-strong); }
+    .terminal-title { margin-left: 6px; }
+    pre {
+      margin: 0;
+      padding: 24px 24px 25px 68px;
+      overflow-x: auto;
+      color: #dfe5e8;
+      font: 13px/1.75 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      tab-size: 4;
+    }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    p code, li code, td code {
+      padding: 2px 5px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--panel);
+      color: #dfe5e8;
+      font-size: .88em;
+    }
+    .kw { color: var(--signal); }
+    .type { color: var(--code-blue); }
+    .str { color: var(--code-gold); }
+    .comment { color: var(--faint); }
+
+    .proof-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      margin-bottom: 88px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .proof {
+      min-height: 98px;
+      padding: 17px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-right: 1px solid var(--line);
+    }
+    .proof:last-child { border-right: 0; }
+    .proof b { font: 700 17px/1.1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .proof span { color: var(--faint); font-size: 11px; line-height: 1.35; }
+
+    section { margin: 0 0 92px; }
+    .section-intro { max-width: 650px; margin-bottom: 30px; font-size: 17px; }
+
+    .install-grid, .feature-grid, .link-grid { display: grid; gap: 12px; }
+    .install-grid > *, .feature-grid > *, .link-grid > *, .step > * { min-width: 0; }
+    .install-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .link-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    .card {
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+    .card-kicker {
+      margin-bottom: 13px;
+      color: var(--signal);
+      font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .card p:last-child { margin-bottom: 0; }
+    .card pre {
+      margin: 16px -20px -20px;
+      padding: 16px 20px;
+      border-top: 1px solid var(--line);
+      background: #0a0c0e;
+      font-size: 12px;
+    }
+    .feature-card { min-height: 220px; }
+    .feature-card .syntax {
+      display: block;
+      margin-top: 24px;
+      color: #dfe5e8;
+      font: 12px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: pre-wrap;
+    }
+
+    .steps { counter-reset: step; display: grid; gap: 0; border-top: 1px solid var(--line); }
+    .step {
+      counter-increment: step;
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      padding: 24px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .step::before {
+      content: counter(step, decimal-leading-zero);
+      color: var(--signal);
+      font: 700 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .step p:last-child { margin-bottom: 0; }
+
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; min-width: 620px; }
+    th, td { padding: 14px 16px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th {
+      color: var(--faint);
+      font: 700 10px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    td { color: var(--muted); }
+    td:first-child { width: 160px; color: var(--text); }
+    tr:last-child td { border-bottom: 0; }
+
+    .callout {
+      margin: 26px 0;
+      padding: 18px 20px;
+      border-left: 2px solid var(--signal);
+      background: var(--signal-soft);
+    }
+    .callout p { margin: 0; color: #d9bbb5; }
+
+    .namespace-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 25px;
+    }
+    .namespace-list span {
+      padding: 6px 9px;
+      border: 1px solid var(--line-strong);
+      border-radius: 5px;
+      color: #dfe5e8;
+      font: 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .doc-link {
+      min-height: 140px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      text-decoration: none;
+    }
+    .doc-link:hover { border-color: var(--line-strong); background: var(--panel); }
+    .doc-link b { font-size: 15px; }
+    .doc-link span { color: var(--faint); font-size: 12px; line-height: 1.45; }
+    .doc-link i { color: var(--signal); font: normal 13px/1 ui-monospace, monospace; }
+
+    footer {
+      padding-top: 28px;
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      border-top: 1px solid var(--line);
+      color: var(--faint);
+      font-size: 12px;
+    }
+
+    @media (max-width: 900px) {
+      :root { --sidebar: 0px; }
+      .top-nav a:not(.github-link) { display: none; }
+      aside { display: none; }
+      main { margin-left: 0; padding-top: calc(var(--header) + 34px); }
+      .mobile-nav {
+        display: block;
+        width: min(100%, var(--content));
+        margin: 0 auto 40px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--panel);
+      }
+      .mobile-nav summary {
+        padding: 11px 14px;
+        cursor: pointer;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .mobile-nav nav {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1px;
+        padding: 1px;
+        border-top: 1px solid var(--line);
+      }
+      .mobile-nav a { padding: 10px 12px; color: var(--muted); text-decoration: none; }
+      .proof-strip { grid-template-columns: repeat(2, 1fr); }
+      .proof:nth-child(2) { border-right: 0; }
+      .proof:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+    }
+
+    @media (max-width: 640px) {
+      .header-inner { padding: 0 16px; }
+      .brand small { display: none; }
+      main { padding-inline: 18px; padding-bottom: 72px; }
+      h1 { font-size: 43px; }
+      .lede { font-size: 17px; }
+      .install-grid, .feature-grid, .link-grid { grid-template-columns: minmax(0, 1fr); }
+      .feature-card { min-height: 0; }
+      .terminal::after { left: 33px; }
+      pre { padding-left: 48px; font-size: 11px; }
+      .proof-strip { margin-bottom: 70px; }
+      section { margin-bottom: 72px; }
+      footer { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to documentation</a>
+
+  <header>
+    <div class="header-inner">
+      <a class="brand" href="#top" aria-label="Yabumi documentation home">
+        <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 18.5 21 4l-6.2 16-3.2-6.8L3 18.5Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+          <path d="m11.6 13.2 3.3-2.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+        YABUMI <small>docs</small>
+      </a>
+      <nav class="top-nav" aria-label="Primary">
+        <a href="#install">Install</a>
+        <a href="#language">Language</a>
+        <a href="#cli">CLI</a>
+        <a href="#reference" aria-current="page">Reference</a>
+        <a class="github-link" href="https://github.com/smartcrabai/yabumi">GitHub ↗</a>
+      </nav>
+    </div>
+  </header>
+
+  <aside>
+    <nav aria-label="Documentation">
+      <p class="nav-label">Start here</p>
+      <a class="nav-primary" href="#overview">What is Yabumi?</a>
+      <a href="#install">Install</a>
+      <a href="#quick-start">First script</a>
+
+      <p class="nav-label">Language</p>
+      <a href="#language">Design model</a>
+      <a href="#immutability">Immutable by default</a>
+      <a href="#effects">Effect declarations</a>
+      <a href="#errors">Typed errors</a>
+      <a href="#concurrency">Explicit concurrency</a>
+
+      <p class="nav-label">Tooling</p>
+      <a href="#cli">CLI reference</a>
+      <a href="#stdlib">Standard library</a>
+      <a href="#lsp">Editor support</a>
+
+      <p class="nav-label">More</p>
+      <a href="#reference">Full reference</a>
+      <a href="https://github.com/smartcrabai/yabumi/tree/main/samples">Verified samples ↗</a>
+    </nav>
+  </aside>
+
+  <main id="content">
+    <details class="mobile-nav">
+      <summary>Browse documentation</summary>
+      <nav aria-label="Mobile documentation">
+        <a href="#overview">Overview</a>
+        <a href="#install">Install</a>
+        <a href="#quick-start">First script</a>
+        <a href="#language">Language</a>
+        <a href="#cli">CLI</a>
+        <a href="#stdlib">Standard library</a>
+        <a href="#lsp">Editor support</a>
+        <a href="#reference">Reference</a>
+      </nav>
+    </details>
+
+    <div class="content">
+      <section id="overview">
+        <p class="eyebrow">Single-file language for Agent Skills</p>
+        <h1 id="top">Scripts agents can get right the first time.</h1>
+        <p class="lede">Yabumi replaces fragile bash and oversized Python helpers with one typed, self-contained file. Effects, failures, mutability, and concurrency stay visible in the source.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#install">Install Yabumi ↓</a>
+          <a class="button" href="#quick-start">Write your first script</a>
+        </div>
+
+        <div class="terminal" aria-label="Yabumi code example">
+          <div class="terminal-bar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="terminal-title">release.ybm</span>
+          </div>
+          <pre><code><span class="comment"># Fetch two manifests concurrently. Effects stay visible.</span>
+<span class="kw">def</span> manifest(url: <span class="type">str</span>): <span class="type">Result[str, Error]</span> <span class="kw">uses</span> {net}
+    response = http.get(url)?
+    <span class="kw">return</span> response.body
+
+urls = [<span class="str">"https://api.example.com/a"</span>, <span class="str">"https://api.example.com/b"</span>]
+results = urls.par_map((url) =&gt; manifest(url))
+results.each((result) =&gt; print(result.unwrap_or(<span class="str">"failed"</span>)))</code></pre>
+        </div>
+
+        <div class="proof-strip" aria-label="Project properties">
+          <div class="proof"><b>1 file</b><span>Script and types travel together</span></div>
+          <div class="proof"><b>0 deps</b><span>Single native binary distribution</span></div>
+          <div class="proof"><b>6 effects</b><span>fs · net · env · proc · time · rand</span></div>
+          <div class="proof"><b>4 commands</b><span>run · check · test · lsp</span></div>
+        </div>
+      </section>
+
+      <section id="install">
+        <p class="eyebrow">Install</p>
+        <h2>One binary. No runtime setup.</h2>
+        <p class="section-intro">Choose Homebrew or the shell installer. Both install the <code>ybm</code> command.</p>
+        <div class="install-grid">
+          <article class="card">
+            <p class="card-kicker">Homebrew</p>
+            <h3>macOS and Linux</h3>
+            <p>Install from the SmartCrab tap.</p>
+            <pre><code>brew install smartcrabai/tap/yabumi</code></pre>
+          </article>
+          <article class="card">
+            <p class="card-kicker">Shell installer</p>
+            <h3>Latest release</h3>
+            <p>Download the platform binary from GitHub Releases.</p>
+            <pre><code>curl --proto '=https' --tlsv1.2 -LsSf \
+  https://github.com/smartcrabai/yabumi/releases/latest/download/yabumi-installer.sh | sh</code></pre>
+          </article>
+        </div>
+        <div class="callout">
+          <p><strong>Agent Skill:</strong> install the bundled skill with <code>npx skills add smartcrabai/yabumi --skill yabumi</code>.</p>
+        </div>
+      </section>
+
+      <section id="quick-start">
+        <p class="eyebrow">Quick start</p>
+        <h2>From empty file to checked script.</h2>
+        <div class="steps">
+          <article class="step">
+            <div>
+              <h3>Create <code>hello.ybm</code></h3>
+              <p>Top-level code runs from top to bottom. No entry-point ceremony.</p>
+              <div class="terminal">
+                <pre><code>name = env.get(<span class="str">"USER"</span>).unwrap_or(<span class="str">"agent"</span>)
+print(f<span class="str">"hello, {name}"</span>)</code></pre>
+              </div>
+            </div>
+          </article>
+          <article class="step">
+            <div>
+              <h3>Check before execution</h3>
+              <p>Type checking, formatting diff, lint, and doc-test type checking run together.</p>
+              <div class="terminal"><pre><code>$ ybm check hello.ybm</code></pre></div>
+            </div>
+          </article>
+          <article class="step">
+            <div>
+              <h3>Run only after a clean check</h3>
+              <p><code>ybm</code> always type-checks first, then executes on success.</p>
+              <div class="terminal"><pre><code>$ ybm hello.ybm
+hello, agent</code></pre></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="language">
+        <p class="eyebrow">Language model</p>
+        <h2>What you see is what happens.</h2>
+        <p class="section-intro">Yabumi removes the invisible behavior that makes generated scripts hard to audit. Four rules carry most of the language.</p>
+        <div class="feature-grid">
+          <article class="card feature-card" id="immutability">
+            <p class="card-kicker">State</p>
+            <h3>Immutable by default</h3>
+            <p>Reassignment requires <code>var</code>. The first binding fixes the type.</p>
+            <code class="syntax">x = 5
+<span class="kw">var</span> retries = 0
+retries = retries + 1</code>
+          </article>
+          <article class="card feature-card" id="effects">
+            <p class="card-kicker">Auditability</p>
+            <h3>Effects in every signature</h3>
+            <p>Pure is the default. Filesystem, network, environment, process, time, and random access must be declared.</p>
+            <code class="syntax"><span class="kw">def</span> save(path: <span class="type">str</span>, body: <span class="type">str</span>): <span class="type">Option[Error]</span>
+    <span class="kw">uses</span> {fs}</code>
+          </article>
+          <article class="card feature-card" id="errors">
+            <p class="card-kicker">Failure</p>
+            <h3>Typed errors, explicit propagation</h3>
+            <p><code>Result</code> and <code>Option</code> cannot be silently ignored. <code>?</code> returns failure early.</p>
+            <code class="syntax">n = input.parse_int()?
+<span class="kw">return</span> n * 2</code>
+          </article>
+          <article class="card feature-card" id="concurrency">
+            <p class="card-kicker">Concurrency</p>
+            <h3>Parallel only when written</h3>
+            <p><code>par</code>, <code>par_map</code>, and <code>par_each</code> make fan-out visible and preserve input order.</p>
+            <code class="syntax">pages = urls.par_map((url) =&gt;
+    http.get(url))</code>
+          </article>
+        </div>
+      </section>
+
+      <section id="cli">
+        <p class="eyebrow">CLI reference</p>
+        <h2>Four commands, one diagnostic format.</h2>
+        <p class="section-intro">Every failure uses <code>file:line:col [E0000] message</code>. Stable error codes let agents recover without parsing prose.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Command</th><th>Behavior</th><th>Success</th></tr></thead>
+            <tbody>
+              <tr><td><code>ybm &lt;file&gt;</code></td><td>Type-check, then run only on success.</td><td>Exit 0</td></tr>
+              <tr><td><code>ybm check</code></td><td>Type-check, read-only format diff, lint, and doc-test type checking.</td><td>Clean file</td></tr>
+              <tr><td><code>ybm test</code></td><td>Execute fenced examples in declaration doc comments.</td><td>All pass</td></tr>
+              <tr><td><code>ybm lsp</code></td><td>Start the Language Server Protocol server over stdio.</td><td>Clean shutdown</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <p>Use <code>ybm check --apply &lt;file&gt;</code> to rewrite formatting in place. Without <code>--apply</code>, formatting stays read-only.</p>
+        </div>
+      </section>
+
+      <section id="stdlib">
+        <p class="eyebrow">Standard library</p>
+        <h2>Useful without imports.</h2>
+        <p class="section-intro">Core types and namespaces are globally available. Effectful functions declare the same effect vocabulary as user code.</p>
+        <div class="namespace-list" aria-label="Standard library namespaces">
+          <span>json</span><span>csv</span><span>yaml</span><span>toml</span><span>fs</span><span>http</span><span>env</span><span>proc</span><span>time</span><span>rand</span><span>regex</span><span>math</span>
+        </div>
+        <div class="callout">
+          <p><strong>Safe and direct APIs coexist.</strong> Indexing may terminate on an invalid key; <code>.get()</code> returns <code>Option</code>. The choice stays visible at the call site.</p>
+        </div>
+        <a class="button" href="STDLIB.md">Open complete stdlib reference →</a>
+      </section>
+
+      <section id="lsp">
+        <p class="eyebrow">Editor support</p>
+        <h2>Diagnostics while you write.</h2>
+        <p class="section-intro"><code>ybm lsp</code> speaks LSP over stdio and analyzes open files without executing them.</p>
+        <div class="feature-grid">
+          <article class="card">
+            <p class="card-kicker">Feedback</p>
+            <h3>Live diagnostics</h3>
+            <p>Parse, type, effect, and lint errors use the same stable diagnostic codes as the CLI.</p>
+          </article>
+          <article class="card">
+            <p class="card-kicker">Navigation</p>
+            <h3>Language-aware editing</h3>
+            <p>Live diagnostics, type hover, go to definition, and whole-document formatting over full-document synchronization.</p>
+          </article>
+        </div>
+        <p style="margin-top: 18px"><a href="LSP.md">Editor setup and capability matrix →</a></p>
+      </section>
+
+      <section id="reference">
+        <p class="eyebrow">Full reference</p>
+        <h2>Go deeper without losing the source of truth.</h2>
+        <p class="section-intro">The language specification is canonical. Decisions record resolved design details; verified samples double as acceptance tests.</p>
+        <div class="link-grid">
+          <a class="doc-link" href="../SPEC.md">
+            <b>Language specification</b>
+            <span>Syntax, types, effects, errors, concurrency, modules, and permissions.</span>
+            <i>SPEC.md →</i>
+          </a>
+          <a class="doc-link" href="STDLIB.md">
+            <b>Standard library</b>
+            <span>Complete signatures for types, collections, codecs, I/O, and utilities.</span>
+            <i>STDLIB.md →</i>
+          </a>
+          <a class="doc-link" href="LSP.md">
+            <b>LSP guide</b>
+            <span>Supported capabilities, editor configuration, and protocol behavior.</span>
+            <i>LSP.md →</i>
+          </a>
+        </div>
+      </section>
+
+      <footer>
+        <span>Yabumi is MIT licensed.</span>
+        <span>Built as one HTML file. No JavaScript, fonts, or external assets.</span>
+      </footer>
+    </div>
+  </main>
+</body>
+</html>
