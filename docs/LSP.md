@@ -57,6 +57,33 @@ file-types = ["ybm"]
 language-servers = ["yabumi"]
 ```
 
+## Zed
+
+Zed requires a language extension to register the Yabumi language and LSP adapter; `settings.json`
+alone cannot register an arbitrary language server. After installing a Yabumi language extension
+that registers the `Yabumi` language, `.ybm` files, and server ID `yabumi`, configure the LSP
+binary override:
+
+```json
+{
+  "lsp": {
+    "yabumi": {
+      "binary": {
+        "path": "ybm",
+        "arguments": ["lsp"]
+      }
+    }
+  }
+}
+```
+
+The extension owns the language-to-server mapping. Do not add a `languages.Yabumi` override;
+it can attach the server to non-`.ybm` buffers. Use an absolute `binary.path` when `ybm` is not
+on Zed's `PATH`.
+
+No Yabumi-specific Zed language extension is included in this repository yet. The current mbp
+setup uses a local development extension installed separately.
+
 ## Visual Studio Code
 
 Visual Studio Code does not provide a generic LSP client configuration in `settings.json`. Install
