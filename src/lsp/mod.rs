@@ -898,7 +898,7 @@ mod tests {
             .and_then(|params| params.get("diagnostics"))
             .and_then(Json::as_arr)
             .unwrap_or_else(|| panic!("expected sibling diagnostics"));
-        assert!(!diagnostics.is_empty());
+        assert_ne!(diagnostics, []);
         remove_temp_project(entry, module);
     }
 
@@ -1135,6 +1135,6 @@ mod tests {
         let mut output = Vec::new();
         let exit = run_server(Cursor::new(input), &mut output);
         assert_eq!(exit, std::process::ExitCode::SUCCESS);
-        assert!(!output.is_empty());
+        assert_ne!(output, [] as [u8; 0]);
     }
 }

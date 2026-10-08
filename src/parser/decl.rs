@@ -396,7 +396,7 @@ mod tests {
         assert_eq!(f.params[0].name.as_ref(), "x");
         assert_eq!(f.params[1].name.as_ref(), "y");
         assert_eq!(named_type(&f.ret), "T");
-        assert!(f.effects.is_empty());
+        assert_eq!(f.effects, [] as [std::sync::Arc<str>; 0]);
     }
 
     /// D-MUT-01: whether `self`/`var self` is present, and its mutability, is reflected in self_param.

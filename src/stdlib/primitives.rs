@@ -319,12 +319,6 @@ mod tests {
     }
 
     #[test]
-    #[expect(
-        clippy::float_cmp,
-        reason = "The point here is verifying bit-for-bit round-trip fidelity \
-                  (parse(format_float(x)) == x), not a tolerance-based numeric comparison, so \
-                  strict equality is the intended check"
-    )]
     fn format_float_round_trips_via_parse() {
         for x in [0.0, 1.0, -1.0, 2.5, 1e20, 1e-10, 123_456.789] {
             let s = format_float(x);

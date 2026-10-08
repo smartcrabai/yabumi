@@ -272,7 +272,7 @@ mod tests {
         let ty = parse_one_type_ann("() -> T\n");
         let (params, effects, ret) = as_function(&ty);
         assert!(params.is_empty());
-        assert!(effects.is_empty());
+        assert_eq!(effects, []);
         assert_eq!(as_named(ret).0, "T");
     }
 

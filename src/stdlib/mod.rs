@@ -122,7 +122,7 @@ mod tests {
         };
         assert_eq!(inst.variant_name.as_ref(), "None");
         assert_eq!(inst.variant_index, 1);
-        assert!(inst.fields.is_empty());
+        assert_eq!(inst.fields, [] as [crate::eval::value::Value; 0]);
     }
 
     #[test]

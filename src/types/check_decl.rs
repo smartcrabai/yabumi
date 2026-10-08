@@ -602,7 +602,7 @@ mod tests {
     fn toml_encode_list_root_remains_supported() {
         let dir = sample_path("samples/err/static/11-1_toml_encode_root_type_error");
         let (diags, _sources) = typecheck_entry(&dir.join("entry_toml_encode_list_root.ybm"));
-        assert!(e1xxx_e3001_codes(&diags).is_empty());
+        assert_eq!(e1xxx_e3001_codes(&diags), [] as [std::string::String; 0]);
     }
 
     #[test]

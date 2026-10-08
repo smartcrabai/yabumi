@@ -86,6 +86,6 @@ mod tests {
     #[test]
     fn returns_empty_for_nonexistent_root() {
         let dirs = discover_sample_dirs("this/path/does/not/exist/at/all");
-        assert!(dirs.is_empty());
+        assert_eq!(dirs, [] as [PathBuf; 0]);
     }
 }
