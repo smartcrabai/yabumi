@@ -555,7 +555,7 @@ notes = "description"
         assert!(!case.fmt_diff_expected);
         assert_eq!(case.stdout.mode, StdioMode::Exact);
         assert_eq!(case.stdout.value, "hello\n");
-        assert!(case.doc_blocks.is_empty());
+        assert_eq!(case.doc_blocks, [] as [DocBlockExpectation; 0]);
     }
 
     #[test]

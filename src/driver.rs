@@ -1433,8 +1433,8 @@ mod tests {
         let mut out = Vec::new();
         let mut err = Vec::new();
         assert!(!apply_fmt(&files, &sources, false, &mut out, &mut err));
-        assert!(!out.is_empty());
-        assert!(err.is_empty());
+        assert_ne!(out, [] as [u8; 0]);
+        assert_eq!(err, [] as [u8; 0]);
         assert_eq!(
             fs::read_to_string(&entry_path).ok().as_deref(),
             Some(entry_text)
@@ -1446,7 +1446,7 @@ mod tests {
 
         out.clear();
         assert!(apply_fmt(&files, &sources, true, &mut out, &mut err));
-        assert!(err.is_empty());
+        assert_eq!(err, [] as [u8; 0]);
         assert_eq!(
             fs::read_to_string(&entry_path).ok().as_deref(),
             Some("value = 1\n")
@@ -1493,7 +1493,7 @@ mod tests {
             apply_fmt: false,
         });
         assert!(!ok);
-        assert!(out.is_empty());
+        assert_eq!(out, "");
         assert!(err.contains("[E1050]") || err.contains("[E1020]"));
         let _ = fs::remove_dir_all(dir);
     }
