@@ -115,7 +115,7 @@ impl Visitor for NamingVisitor<'_> {
     }
 
     fn visit_expr(&mut self, expr: &Expr) {
-        if let ExprKind::Lambda { params, body } = &expr.kind {
+        if let ExprKind::Lambda { params, body, .. } = &expr.kind {
             for p in params {
                 check_snake(&p.name, p.span, self.diagnostics);
             }

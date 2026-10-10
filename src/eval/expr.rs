@@ -4,8 +4,9 @@ use super::env::{Environment, Program};
 use super::value::{CallTarget, Closure, EnumInstance, LambdaBody, MapKey, Value};
 use super::{Abort, EvalResult, Flow, eval_val};
 use crate::ast::{
-    Arg, ElseBranch, Expr, ExprKind, FStringSegment, IfExpr, LambdaParam, LiteralPat, MatchArm,
-    MatchArmBody, ParKind, Pattern, PipeCallee, PipeExpr, PipeStage, StmtKind, SubPattern,
+    Arg, ElseBranch, Expr, ExprKind, FStringSegment, IfExpr, LambdaParam, ListComments, LiteralPat,
+    MatchArm, MatchArmBody, ParKind, Pattern, PipeCallee, PipeExpr, PipeStage, StmtKind,
+    SubPattern,
 };
 use crate::diagnostics::Span;
 use crate::types::BareIdentKind;
@@ -52,10 +53,12 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment, program: &Arc<Program>) -> 
         ExprKind::Index { target, index } => eval_index_read(expr, target, index, env, program),
         ExprKind::Question { target } => eval_question(target, env, program),
         ExprKind::Pipe(pipe) => eval_pipe(pipe, env, program),
-        ExprKind::Lambda { params, body } => Ok(Flow::Value(eval_lambda(params, body, env))),
+        ExprKind::Lambda { params, body, .. } => Ok(Flow::Value(eval_lambda(params, body, env))),
         ExprKind::If(if_expr) => eval_if(if_expr, env, program),
-        ExprKind::Match { scrutinee, arms } => eval_match(scrutinee, arms, env, program),
-        ExprKind::Par { kind, elements } => {
+        ExprKind::Match {
+            scrutinee, arms, ..
+        } => eval_match(scrutinee, arms, env, program),
+        ExprKind::Par { kind, elements, .. } => {
             let owned_kind = match kind {
                 ParKind::List => ParKind::List,
                 ParKind::Tuple => ParKind::Tuple,
@@ -376,7 +379,7 @@ fn eval_pipe_stage(
             env,
             program,
         )?)),
-        PipeCallee::WithArgs { callee, args } => {
+        PipeCallee::WithArgs { callee, args, .. } => {
             super::call::invoke_pipe_with_args(callee, args, &input, env, program)
         }
     }
@@ -603,33 +606,41 @@ fn clone_expr_kind(kind: &ExprKind) -> ExprKind {
         ExprKind::ListLit {
             elements,
             was_multiline,
+            comments,
         } => ExprKind::ListLit {
             elements: elements.iter().map(clone_expr).collect(),
             was_multiline: *was_multiline,
+            comments: ListComments::new(comments.open_line),
         },
         ExprKind::DictLit {
             entries,
             was_multiline,
+            comments,
         } => ExprKind::DictLit {
             entries: entries
                 .iter()
                 .map(|(k, v)| (clone_expr(k), clone_expr(v)))
                 .collect(),
             was_multiline: *was_multiline,
+            comments: ListComments::new(comments.open_line),
         },
         ExprKind::SetLit {
             elements,
             was_multiline,
+            comments,
         } => ExprKind::SetLit {
             elements: elements.iter().map(clone_expr).collect(),
             was_multiline: *was_multiline,
+            comments: ListComments::new(comments.open_line),
         },
         ExprKind::TupleLit {
             elements,
             was_multiline,
+            comments,
         } => ExprKind::TupleLit {
             elements: elements.iter().map(clone_expr).collect(),
             was_multiline: *was_multiline,
+            comments: ListComments::new(comments.open_line),
         },
         ExprKind::Unary { op, operand } => ExprKind::Unary {
             op: *op,
@@ -644,18 +655,21 @@ fn clone_expr_kind(kind: &ExprKind) -> ExprKind {
             callee,
             args,
             was_multiline,
+            comments,
             ..
         } => ExprKind::Call {
             callee: Box::new(clone_expr(callee)),
             type_args: Vec::new(),
             args: args.iter().map(clone_arg).collect(),
             was_multiline: *was_multiline,
+            comments: ListComments::new(comments.open_line),
         },
         ExprKind::MethodCall {
             receiver,
             method,
             args,
             was_multiline,
+            comments,
             ..
         } => ExprKind::MethodCall {
             receiver: Box::new(clone_expr(receiver)),
@@ -663,6 +677,7 @@ fn clone_expr_kind(kind: &ExprKind) -> ExprKind {
             type_args: Vec::new(),
             args: args.iter().map(clone_arg).collect(),
             was_multiline: *was_multiline,
+            comments: ListComments::new(comments.open_line),
         },
         ExprKind::FieldAccess { target, field } => ExprKind::FieldAccess {
             target: Box::new(clone_expr(target)),
@@ -680,7 +695,7 @@ fn clone_expr_kind(kind: &ExprKind) -> ExprKind {
             target: Box::new(clone_expr(target)),
         },
         ExprKind::Pipe(pipe) => ExprKind::Pipe(clone_pipe_expr(pipe)),
-        ExprKind::Lambda { params, body } => ExprKind::Lambda {
+        ExprKind::Lambda { params, body, .. } => ExprKind::Lambda {
             params: params
                 .iter()
                 .map(|p| LambdaParam {
@@ -690,18 +705,27 @@ fn clone_expr_kind(kind: &ExprKind) -> ExprKind {
                 })
                 .collect(),
             body: Box::new(clone_expr(body)),
+            header_comment: None,
         },
         ExprKind::If(if_expr) => ExprKind::If(Box::new(clone_if_expr(if_expr))),
-        ExprKind::Match { scrutinee, arms } => ExprKind::Match {
+        ExprKind::Match {
+            scrutinee, arms, ..
+        } => ExprKind::Match {
             scrutinee: Box::new(clone_expr(scrutinee)),
             arms: arms.iter().map(clone_match_arm).collect(),
+            header_comment: None,
         },
-        ExprKind::Par { kind, elements } => ExprKind::Par {
+        ExprKind::Par {
+            kind,
+            elements,
+            comments,
+        } => ExprKind::Par {
             kind: match kind {
                 ParKind::List => ParKind::List,
                 ParKind::Tuple => ParKind::Tuple,
             },
             elements: elements.iter().map(clone_expr).collect(),
+            comments: ListComments::new(comments.open_line),
         },
         ExprKind::Grouping(inner) => ExprKind::Grouping(Box::new(clone_expr(inner))),
     }
@@ -733,9 +757,14 @@ fn clone_pipe_stage(stage: &PipeStage) -> PipeStage {
     PipeStage {
         callee: match &stage.callee {
             PipeCallee::Bare(e) => PipeCallee::Bare(clone_expr(e)),
-            PipeCallee::WithArgs { callee, args } => PipeCallee::WithArgs {
+            PipeCallee::WithArgs {
+                callee,
+                args,
+                comments,
+            } => PipeCallee::WithArgs {
                 callee: Box::new(clone_expr(callee)),
                 args: args.iter().map(clone_arg).collect(),
+                comments: ListComments::new(comments.open_line),
             },
         },
         question: stage.question,
@@ -808,6 +837,7 @@ fn clone_block(block: &crate::ast::Block) -> crate::ast::Block {
     crate::ast::Block {
         stmts: block.stmts.iter().map(clone_stmt).collect(),
         span: block.span,
+        header_comment: None,
     }
 }
 

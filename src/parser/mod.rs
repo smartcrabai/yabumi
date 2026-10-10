@@ -686,7 +686,7 @@ mod tests {
     /// (doctest samples) should always be syntactically valid, since doc/ordinary comments
     /// are skipped at the lexing stage as `#`/`##` lines (the parser itself never looks at
     /// comments at all, see the comment at the top of this file). The fmt/doctest portion
-    /// of satisfying this unit's instruction to "actually parse the 158 files under
+    /// of satisfying this unit's instruction to "actually parse the 160 files under
     /// samples".
     #[test]
     fn all_samples_fmt_and_doctest_files_parse_without_diagnostics() {
@@ -696,8 +696,8 @@ mod tests {
         files.sort();
         assert_eq!(
             files.len(),
-            27,
-            "the total number of .ybm files in samples/fmt (20) + samples/doctest (7) should match the expected count (27)"
+            29,
+            "the total number of .ybm files in samples/fmt (22) + samples/doctest (7) should match the expected count (29)"
         );
 
         let samples_root = sample_path("samples");

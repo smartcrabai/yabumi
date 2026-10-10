@@ -121,6 +121,7 @@ impl Parser<'_> {
             methods,
             leading_comments: Vec::new(),
             doc_comment: None,
+            header_comment: None,
             span: span_between(start_span, end_span),
         }
     }
@@ -158,6 +159,7 @@ impl Parser<'_> {
             variants,
             leading_comments: Vec::new(),
             doc_comment: None,
+            header_comment: None,
             span: span_between(start_span, end_span),
         }
     }

@@ -154,7 +154,9 @@ pub(crate) fn walk_expr<V: Visitor + ?Sized>(v: &mut V, expr: &Expr) {
         ExprKind::Pipe(pipe) => v.visit_pipe(pipe),
         ExprKind::Lambda { body, .. } => v.visit_expr(body),
         ExprKind::If(if_expr) => v.visit_if(if_expr),
-        ExprKind::Match { scrutinee, arms } => {
+        ExprKind::Match {
+            scrutinee, arms, ..
+        } => {
             v.visit_expr(scrutinee);
             for arm in arms {
                 v.visit_pattern(&arm.pattern);
@@ -175,7 +177,7 @@ pub(crate) fn walk_pipe<V: Visitor + ?Sized>(v: &mut V, pipe: &PipeExpr) {
     for stage in &pipe.stages {
         match &stage.callee {
             PipeCallee::Bare(e) => v.visit_expr(e),
-            PipeCallee::WithArgs { callee, args } => {
+            PipeCallee::WithArgs { callee, args, .. } => {
                 v.visit_expr(callee);
                 for a in args {
                     if !a.is_placeholder {

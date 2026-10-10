@@ -49,17 +49,17 @@ fn collect_dirs_with_expected_toml(dir: &Path, out: &mut Vec<PathBuf>) {
 mod tests {
     use super::*;
 
-    /// Confirms that `discover_sample_dirs` finds 89 directories under the real `samples/`
-    /// (per the request: discover should find 89 directories). This is a unit test of the
+    /// Confirms that `discover_sample_dirs` finds 90 directories under the real `samples/`
+    /// (per the request: discover should find 90 directories). This is a unit test of the
     /// harness itself, so it is not marked `#[ignore]`.
     #[test]
-    fn discovers_all_89_sample_directories() {
+    fn discovers_all_90_sample_directories() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("samples");
         let dirs = discover_sample_dirs(root.to_str().unwrap_or_default());
         assert_eq!(
             dirs.len(),
-            89,
-            "expected 89 directories but found {}: {:?}",
+            90,
+            "expected 90 directories but found {}: {:?}",
             dirs.len(),
             dirs
         );

@@ -89,6 +89,8 @@ pub struct StructDecl {
     /// FunctionDecl.
     pub leading_comments: Vec<LeadingComment>,
     pub doc_comment: Option<DocComment>,
+    /// Trailing comment on the `struct Name` line (§5.9, fmt only).
+    pub header_comment: Option<String>,
     pub span: Span,
 }
 
@@ -101,6 +103,8 @@ pub struct EnumDecl {
     /// FunctionDecl.
     pub leading_comments: Vec<LeadingComment>,
     pub doc_comment: Option<DocComment>,
+    /// Trailing comment on the `enum Name` line (§5.9, fmt only).
+    pub header_comment: Option<String>,
     pub span: Span,
 }
 

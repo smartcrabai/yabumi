@@ -297,6 +297,7 @@ mod tests {
             methods: vec![],
             leading_comments: vec![],
             doc_comment: None,
+            header_comment: None,
             span: dummy_span(),
         }
     }

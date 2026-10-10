@@ -7,7 +7,9 @@ Read this file before writing or repairing `.ybm` code. Yabumi is not Python, Ru
 - Extension: `.ybm`; encoding: UTF-8.
 - Optional first line: `#!/usr/bin/env ybm`.
 - Identifiers are ASCII: `[a-zA-Z_][a-zA-Z0-9_]*`.
-- `#` starts a line comment. `##` immediately before a declaration is a doc comment.
+- `#` starts a comment that runs to end of line, standalone or trailing (`a = 1 # note`). It is allowed on block opener lines (`def`/`if`/`else`/`match`/`struct`/`enum`, match arms `pat =>`, lambda `=>` lines) and after elements inside multi-line `[]`/`{}`/`()` literals and argument lists. `##` immediately before a declaration is a doc comment.
+- fmt canonical form: a `[]`/`{}`/`()` literal or argument list containing any comment is written one element per line with a trailing comma, the comment after the comma (`    1, # first`); write it that way or `ybm check` reports a fmt diff.
+- fmt moves comments at the end of method-chain/pipe continuation lines, and inside `def`/lambda parameter lists, type arguments, index brackets, patterns, `(expr)`, or between a dict key and its value, onto their own line before the next statement (a `def` parameter comment goes to the top of the body). Avoid comments in those positions.
 - Blocks use exactly four spaces. Tabs are errors.
 - Block openers never end in `:`. Colons appear only in type annotations, return types, named arguments, and dictionary entries.
 - Newlines end statements except inside `()`, `[]`, `{}`, or an indented continuation starting with `.` or `|>`.

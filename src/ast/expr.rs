@@ -28,19 +28,23 @@ pub enum ExprKind {
     ListLit {
         elements: Vec<Expr>,
         was_multiline: bool,
+        comments: ListComments,
     },
     DictLit {
         entries: Vec<(Expr, Expr)>,
         was_multiline: bool,
+        comments: ListComments,
     },
     SetLit {
         elements: Vec<Expr>,
         was_multiline: bool,
+        comments: ListComments,
     },
     /// A single element requires a trailing comma (D-TYPE-01), already checked by the parser.
     TupleLit {
         elements: Vec<Expr>,
         was_multiline: bool,
+        comments: ListComments,
     },
 
     Unary {
@@ -62,6 +66,7 @@ pub enum ExprKind {
         type_args: Vec<TypeAnn>,
         args: Vec<Arg>,
         was_multiline: bool,
+        comments: ListComments,
     },
     MethodCall {
         receiver: Box<Expr>,
@@ -69,6 +74,7 @@ pub enum ExprKind {
         type_args: Vec<TypeAnn>,
         args: Vec<Arg>,
         was_multiline: bool,
+        comments: ListComments,
     },
 
     FieldAccess {
@@ -94,16 +100,22 @@ pub enum ExprKind {
     Lambda {
         params: Vec<LambdaParam>,
         body: Box<Expr>,
+        /// Trailing comment on the `=>` line when `body` is if/match on the following line
+        /// (§5.9, fmt only).
+        header_comment: Option<String>,
     },
     If(Box<IfExpr>),
     Match {
         scrutinee: Box<Expr>,
         arms: Vec<MatchArm>,
+        /// Trailing comment on the `match scrutinee` line (§5.9, fmt only).
+        header_comment: Option<String>,
     },
     /// `par [..]` / `par (..)`.
     Par {
         kind: ParKind,
         elements: Vec<Expr>,
+        comments: ListComments,
     },
 
     /// `(expr)`. Kept in the AST too, to distinguish it from a tuple (for fmt's
@@ -119,6 +131,40 @@ pub enum ExprKind {
 pub enum FStringSegment {
     Text(String),
     Expr(Box<Expr>),
+}
+
+/// Comments inside one bracketed, comma-separated list (a list/dict/set/tuple/`par` literal
+/// or a call's argument list), for fmt's comment preservation only (§5.9). The parser sets
+/// `open_line`; `comment_attach` sets `attached`.
+pub struct ListComments {
+    /// Source line of the opening bracket (`[`, `{`, `(`).
+    pub open_line: u32,
+    /// `None` when no comment sits inside the brackets (the common case, kept allocation-free).
+    pub attached: Option<Box<AttachedListComments>>,
+}
+
+impl ListComments {
+    /// No comment attached yet (the parser's initial state).
+    pub fn new(open_line: u32) -> Self {
+        Self {
+            open_line,
+            attached: None,
+        }
+    }
+}
+
+/// The comments found inside one bracketed list. `leading`/`trailing` are parallel to the
+/// list's elements (dict: entries; call: args).
+pub struct AttachedListComments {
+    /// Trailing comment on the opening-bracket line when the first element starts on a later
+    /// line (`foo( # note`).
+    pub open: Option<String>,
+    /// Standalone comment lines before each element.
+    pub leading: Vec<Vec<LeadingComment>>,
+    /// Trailing comment after each element (and its comma) on that element's last line.
+    pub trailing: Vec<Option<String>>,
+    /// Standalone comment lines after the last element, before the closing bracket.
+    pub closing: Vec<LeadingComment>,
 }
 
 /// Represents named arguments (struct construction, `name: value`) and positional arguments
@@ -152,7 +198,11 @@ pub enum PipeCallee {
     Bare(Expr),
     /// A call that includes `_`. A syntax error (E0503) if not even one `is_placeholder` is
     /// present -- checked by the parser.
-    WithArgs { callee: Box<Expr>, args: Vec<Arg> },
+    WithArgs {
+        callee: Box<Expr>,
+        args: Vec<Arg>,
+        comments: ListComments,
+    },
 }
 
 pub struct LambdaParam {

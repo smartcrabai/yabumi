@@ -253,7 +253,9 @@ fn walk_expr_calls<'a>(expr: &'a Expr, on_call: &mut dyn FnMut(CallSite<'a>)) {
         ExprKind::Question { target } => walk_expr_calls(target, on_call),
         ExprKind::Pipe(pipe) => walk_pipe_calls(pipe, on_call),
         ExprKind::If(if_expr) => walk_if_calls(if_expr, on_call),
-        ExprKind::Match { scrutinee, arms } => {
+        ExprKind::Match {
+            scrutinee, arms, ..
+        } => {
             walk_expr_calls(scrutinee, on_call);
             for arm in arms {
                 match &arm.body {
@@ -279,7 +281,7 @@ fn walk_pipe_calls<'a>(pipe: &'a crate::ast::PipeExpr, on_call: &mut dyn FnMut(C
                     args: None,
                 });
             }
-            PipeCallee::WithArgs { callee, args } => {
+            PipeCallee::WithArgs { callee, args, .. } => {
                 walk_expr_calls(callee, on_call);
                 for arg in args {
                     if !arg.is_placeholder {
@@ -714,6 +716,7 @@ mod tests {
             body: Block {
                 stmts: entry_stmts,
                 span: dummy,
+                header_comment: None,
             },
             leading_comments: Vec::new(),
             doc_comment: None,

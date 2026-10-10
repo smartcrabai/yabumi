@@ -697,6 +697,7 @@ mod samples_pipeline_tests {
             body: Block {
                 stmts: entry_stmts_for_check,
                 span: dummy,
+                header_comment: None,
             },
             leading_comments: Vec::new(),
             doc_comment: None,
