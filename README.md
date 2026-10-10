@@ -204,3 +204,8 @@ cargo test --all-features
 cargo clippy --all-targets --all-features -- -D warnings
 cargo fmt --all -- --check
 ```
+
+## Support
+
+If you find yabumi useful, consider [sponsoring smartcrabai](https://github.com/sponsors/smartcrabai)
+to support its development and maintenance.
