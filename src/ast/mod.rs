@@ -4,6 +4,7 @@
 //! side table, §3.7).
 
 pub mod decl;
+pub mod end_line;
 pub mod expr;
 pub mod pattern;
 pub mod stmt;
@@ -14,8 +15,9 @@ pub use decl::{
     Module, Param, SelfParam, StructDecl,
 };
 pub use expr::{
-    Arg, BinaryOp, ElseBranch, Expr, ExprKind, FStringSegment, IfExpr, LambdaParam, MatchArm,
-    MatchArmBody, ParKind, PipeCallee, PipeExpr, PipeStage, UnaryOp,
+    Arg, AttachedListComments, BinaryOp, ElseBranch, Expr, ExprKind, FStringSegment, IfExpr,
+    LambdaParam, ListComments, MatchArm, MatchArmBody, ParKind, PipeCallee, PipeExpr, PipeStage,
+    UnaryOp,
 };
 pub use pattern::{LiteralPat, Pattern, SubPattern};
 pub use stmt::{Block, Stmt, StmtKind};

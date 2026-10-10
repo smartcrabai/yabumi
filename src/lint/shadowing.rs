@@ -205,7 +205,7 @@ impl Visitor for ShadowingVisitor<'_> {
 
     fn visit_expr(&mut self, expr: &Expr) {
         match &expr.kind {
-            ExprKind::Lambda { params, body } => {
+            ExprKind::Lambda { params, body, .. } => {
                 self.scopes.push();
                 for p in params {
                     self.check_and_declare(Arc::clone(&p.name), p.span);
@@ -213,7 +213,9 @@ impl Visitor for ShadowingVisitor<'_> {
                 self.visit_expr(body);
                 self.scopes.pop();
             }
-            ExprKind::Match { scrutinee, arms } => {
+            ExprKind::Match {
+                scrutinee, arms, ..
+            } => {
                 self.visit_expr(scrutinee);
                 for arm in arms {
                     self.scopes.push();

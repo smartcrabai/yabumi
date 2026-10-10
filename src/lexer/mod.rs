@@ -1445,10 +1445,10 @@ mod tests {
         }
     }
 
-    // --- Tokenization verification for all 158 .ybm files under samples/ ---
+    // --- Tokenization verification for all 160 .ybm files under samples/ ---
     // For err/static/2_lexical_errors and entry_indentation_mismatch.ybm, it is correct
     // behavior for lexical-layer diagnostics to be emitted (checked one by one against the
-    // codes below). For the other 150 files, verify they tokenize with zero lexical-layer
+    // codes below). For the other 152 files, verify they tokenize with zero lexical-layer
     // diagnostics (errors from the parser/type-checking and beyond are outside this unit's
     // concern).
 
@@ -1515,12 +1515,12 @@ mod tests {
     }
 
     #[test]
-    fn all_158_sample_ybm_files_tokenize_as_expected() {
+    fn all_160_sample_ybm_files_tokenize_as_expected() {
         let files = all_sample_ybm_files();
         assert_eq!(
             files.len(),
-            158,
-            "the number of .ybm files under samples/ should match the expected count (158) (detects an unexpected addition/removal)"
+            160,
+            "the number of .ybm files under samples/ should match the expected count (160) (detects an unexpected addition/removal)"
         );
 
         let samples_root = sample_path("samples");
@@ -1576,7 +1576,7 @@ mod tests {
             exceptions.len(),
             "every expected lexical-layer diagnostic file should actually have been found (detects e.g. a rename)"
         );
-        assert_eq!(clean_count + checked_exceptions.len(), 158);
+        assert_eq!(clean_count + checked_exceptions.len(), 160);
     }
 
     // --- Additional boundary verification for newlines inside brackets, line continuation, consecutive dedents, and the implicit dedent at end of file ---

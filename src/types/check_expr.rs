@@ -795,7 +795,7 @@ fn check_expr_kind(
         ExprKind::Pipe(pipe) => {
             check_pipe(pipe, expected, ret_ctx, env, program, effects, diagnostics)
         }
-        ExprKind::Lambda { params, body } => {
+        ExprKind::Lambda { params, body, .. } => {
             check_lambda(params, body, expected, env, program, diagnostics)
         }
         ExprKind::If(if_expr) => check_if_expr(
@@ -807,7 +807,9 @@ fn check_expr_kind(
             effects,
             diagnostics,
         ),
-        ExprKind::Match { scrutinee, arms } => check_match_expr(
+        ExprKind::Match {
+            scrutinee, arms, ..
+        } => check_match_expr(
             expr,
             scrutinee,
             arms,
@@ -818,7 +820,7 @@ fn check_expr_kind(
             effects,
             diagnostics,
         ),
-        ExprKind::Par { kind, elements } => {
+        ExprKind::Par { kind, elements, .. } => {
             check_par(kind, elements, ret_ctx, env, program, effects, diagnostics)
         }
         ExprKind::Grouping(inner) => {
@@ -2897,7 +2899,7 @@ fn check_pipe_stage(
 ) -> Ty {
     let (callee_expr, extra_args): (&Expr, &[Arg]) = match &stage.callee {
         PipeCallee::Bare(e) => (e, &[]),
-        PipeCallee::WithArgs { callee, args } => (callee, args.as_slice()),
+        PipeCallee::WithArgs { callee, args, .. } => (callee, args.as_slice()),
     };
     let mut arg_tys: Vec<Ty> = Vec::new();
     let mut arg_spans: Vec<Span> = Vec::new();
@@ -3376,7 +3378,7 @@ fn contains_bare_question(expression: &Expr) -> bool {
                     stage.question
                         || match &stage.callee {
                             PipeCallee::Bare(callee) => contains_bare_question(callee),
-                            PipeCallee::WithArgs { callee, args } => {
+                            PipeCallee::WithArgs { callee, args, .. } => {
                                 contains_bare_question(callee)
                                     || args.iter().any(|argument| {
                                         !argument.is_placeholder
@@ -3387,7 +3389,11 @@ fn contains_bare_question(expression: &Expr) -> bool {
                 })
         }
         ExprKind::If(if_expression) => if_contains_bare_question(if_expression),
-        ExprKind::Match { scrutinee, arms } => {
+        ExprKind::Match {
+            scrutinee,
+            arms,
+            ..
+        } => {
             contains_bare_question(scrutinee)
                 || arms.iter().any(|arm| match &arm.body {
                     MatchArmBody::Expr(expression) => contains_bare_question(expression),

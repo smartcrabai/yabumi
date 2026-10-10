@@ -513,6 +513,7 @@ fn register_entry_point(program: &mut Program, entry_file: FileId, entry_stmts: 
         body: Block {
             stmts: entry_stmts,
             span: dummy,
+            header_comment: None,
         },
         leading_comments: Vec::new(),
         doc_comment: None,

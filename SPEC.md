@@ -27,7 +27,7 @@ There are exactly four subcommands.
 
 - Extension: `.ybm`
 - Shebang: allow `#!/usr/bin/env ybm` on the first line (ignore it during execution)
-- Comments: `#` line comments only. No block comments
+- Comments: `#` line comments only. No block comments. A `#` comment may end any line, including block opener lines (`def`/`if`/`else`/`match`/`struct`/`enum`) and lines inside `()`/`[]`/`{}`
 - Doc comments: `##` immediately before a declaration
 - **Blocks use indentation only**. Trailing colons are forbidden. Indentation is exactly 4 spaces; tabs are syntax errors
 - Encoding: UTF-8

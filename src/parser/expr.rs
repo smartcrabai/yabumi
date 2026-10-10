@@ -14,8 +14,8 @@
 
 use super::{Parser, span_between};
 use crate::ast::{
-    Arg, BinaryOp, Expr, ExprKind, FStringSegment, LambdaParam, ParKind, PipeCallee, PipeExpr,
-    PipeStage, UnaryOp,
+    Arg, BinaryOp, Expr, ExprKind, FStringSegment, LambdaParam, ListComments, ParKind, PipeCallee,
+    PipeExpr, PipeStage, UnaryOp,
 };
 use crate::diagnostics::{ErrorCode, Span};
 use crate::lexer::{Token, TokenKind};
@@ -74,7 +74,7 @@ impl<'a> Parser<'a> {
         let start_span = self.current_span();
         let callee_expr = self.parse_pipe_callee_target();
         let callee = if matches!(self.peek_kind(), Some(TokenKind::LParen)) {
-            let (args, _was_multiline) = self.parse_call_args();
+            let (args, _was_multiline, comments) = self.parse_call_args();
             let has_placeholder = args.iter().any(|a| a.is_placeholder);
             if !has_placeholder {
                 let span = self.previous_span();
@@ -87,6 +87,7 @@ impl<'a> Parser<'a> {
             PipeCallee::WithArgs {
                 callee: Box::new(callee_expr),
                 args,
+                comments,
             }
         } else {
             PipeCallee::Bare(callee_expr)
@@ -331,7 +332,7 @@ impl<'a> Parser<'a> {
                     expr = self.parse_dot_postfix(expr);
                 }
                 Some(TokenKind::LParen) => {
-                    let (args, was_multiline) = self.parse_call_args();
+                    let (args, was_multiline, comments) = self.parse_call_args();
                     let span = span_between(expr.span, self.previous_span());
                     expr = Expr {
                         id: self.next_node_id(),
@@ -340,13 +341,14 @@ impl<'a> Parser<'a> {
                             type_args: Vec::new(),
                             args,
                             was_multiline,
+                            comments,
                         },
                         span,
                     };
                 }
                 Some(TokenKind::LBracket) if self.at_explicit_type_args() => {
                     let type_args = self.parse_type_arg_list();
-                    let (args, was_multiline) = self.parse_call_args();
+                    let (args, was_multiline, comments) = self.parse_call_args();
                     let span = span_between(expr.span, self.previous_span());
                     expr = Expr {
                         id: self.next_node_id(),
@@ -355,6 +357,7 @@ impl<'a> Parser<'a> {
                             type_args,
                             args,
                             was_multiline,
+                            comments,
                         },
                         span,
                     };
@@ -426,7 +429,7 @@ impl<'a> Parser<'a> {
                     Vec::new()
                 };
                 if matches!(self.peek_kind(), Some(TokenKind::LParen)) {
-                    let (args, was_multiline) = self.parse_call_args();
+                    let (args, was_multiline, comments) = self.parse_call_args();
                     let span = span_between(receiver_span, self.previous_span());
                     Expr {
                         id: self.next_node_id(),
@@ -436,6 +439,7 @@ impl<'a> Parser<'a> {
                             type_args,
                             args,
                             was_multiline,
+                            comments,
                         },
                         span,
                     }
@@ -580,6 +584,7 @@ impl<'a> Parser<'a> {
                 kind: ExprKind::TupleLit {
                     elements: Vec::new(),
                     was_multiline: false,
+                    comments: ListComments::new(start_span.start.line),
                 },
                 span,
             };
@@ -598,6 +603,7 @@ impl<'a> Parser<'a> {
                 kind: ExprKind::TupleLit {
                     elements,
                     was_multiline,
+                    comments: ListComments::new(start_span.start.line),
                 },
                 span,
             }
@@ -654,6 +660,7 @@ impl<'a> Parser<'a> {
             kind: ExprKind::Lambda {
                 params,
                 body: Box::new(body),
+                header_comment: None,
             },
             span,
         }
@@ -685,6 +692,7 @@ impl<'a> Parser<'a> {
             kind: ExprKind::ListLit {
                 elements,
                 was_multiline,
+                comments: ListComments::new(start_span.start.line),
             },
             span,
         }
@@ -703,6 +711,7 @@ impl<'a> Parser<'a> {
                 kind: ExprKind::DictLit {
                     entries: Vec::new(),
                     was_multiline: false,
+                    comments: ListComments::new(start_span.start.line),
                 },
                 span,
             };
@@ -727,6 +736,7 @@ impl<'a> Parser<'a> {
                 kind: ExprKind::DictLit {
                     entries,
                     was_multiline,
+                    comments: ListComments::new(start_span.start.line),
                 },
                 span,
             }
@@ -742,6 +752,7 @@ impl<'a> Parser<'a> {
                 kind: ExprKind::SetLit {
                     elements,
                     was_multiline,
+                    comments: ListComments::new(start_span.start.line),
                 },
                 span,
             }
@@ -780,7 +791,11 @@ impl<'a> Parser<'a> {
         let span = span_between(start_span, self.previous_span());
         Expr {
             id: self.next_node_id(),
-            kind: ExprKind::Match { scrutinee, arms },
+            kind: ExprKind::Match {
+                scrutinee,
+                arms,
+                header_comment: None,
+            },
             span,
         }
     }
@@ -801,6 +816,7 @@ impl<'a> Parser<'a> {
                 return self.poison_expr(start_span);
             }
         };
+        let open_line = self.current_span().start.line;
         self.bump(); // '[' or '('
         let saved_flag = self.bare_question_forbidden;
         self.bare_question_forbidden = true;
@@ -810,7 +826,11 @@ impl<'a> Parser<'a> {
         let span = span_between(start_span, self.previous_span());
         Expr {
             id: self.next_node_id(),
-            kind: ExprKind::Par { kind, elements },
+            kind: ExprKind::Par {
+                kind,
+                elements,
+                comments: ListComments::new(open_line),
+            },
             span,
         }
     }
@@ -879,15 +899,16 @@ impl<'a> Parser<'a> {
     }
 
     /// Assuming `(` has already been consumed, parses a comma-separated argument list,
-    /// consumes `)`, and returns `(argument list, was_multiline)` (D-FMT-05: whether there
-    /// was a newline between the opening and closing parens is decided from line numbers).
-    fn parse_call_args(&mut self) -> (Vec<Arg>, bool) {
+    /// consumes `)`, and returns `(argument list, was_multiline, comments)`. `was_multiline`
+    /// (D-FMT-05) is decided from line numbers: whether there was a newline between the
+    /// opening and closing parens. `comments` starts at the opening paren's line.
+    fn parse_call_args(&mut self) -> (Vec<Arg>, bool, ListComments) {
         let open_line = self.current_span().start.line;
         self.bump(); // '(' or '[' (the argument list right after a type-argument call is always '(')
         let args = self.parse_comma_separated(&TokenKind::RParen, Self::parse_call_arg);
         let close_line = self.current_span().start.line;
         self.expect(&TokenKind::RParen, "`)`");
-        (args, open_line != close_line)
+        (args, open_line != close_line, ListComments::new(open_line))
     }
 
     /// A single argument: a pipe's `_` placeholder / `name: value` (named) / an ordinary

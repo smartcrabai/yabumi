@@ -230,7 +230,7 @@ impl Visitor for UnusedVarVisitor<'_> {
     fn visit_expr(&mut self, expr: &Expr) {
         match &expr.kind {
             ExprKind::Ident(name) => self.scopes.mark_used(name),
-            ExprKind::Lambda { params, body } => {
+            ExprKind::Lambda { params, body, .. } => {
                 self.scopes.push();
                 for p in params {
                     self.scopes
@@ -239,7 +239,9 @@ impl Visitor for UnusedVarVisitor<'_> {
                 self.visit_expr(body);
                 self.scopes.pop(self.diagnostics);
             }
-            ExprKind::Match { scrutinee, arms } => {
+            ExprKind::Match {
+                scrutinee, arms, ..
+            } => {
                 self.visit_expr(scrutinee);
                 for arm in arms {
                     self.scopes.push();
@@ -390,6 +392,7 @@ mod tests {
             body: Block {
                 stmts: entry_stmts,
                 span: dummy,
+                header_comment: None,
             },
             leading_comments: Vec::new(),
             doc_comment: None,

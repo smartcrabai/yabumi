@@ -16,6 +16,9 @@ pub struct Block {
     /// or function-body checking in check_decl.rs -- picks the rule).
     pub stmts: Vec<Stmt>,
     pub span: Span,
+    /// Trailing comment on the line that opens this indented block (a `def` signature,
+    /// `if cond`, `else`, a multi-statement match arm's `pattern =>`), fmt only (§5.9).
+    pub header_comment: Option<String>,
 }
 
 pub struct Stmt {

@@ -102,6 +102,7 @@ fn builtin_struct(name: &str, id: NodeId, fields: Vec<(&str, TypeAnn)>) -> Struc
         methods: Vec::new(),
         leading_comments: Vec::new(),
         doc_comment: None,
+        header_comment: None,
         span: builtin_span(),
     }
 }
@@ -120,6 +121,7 @@ fn builtin_function(name: &str, id: NodeId, params: Vec<Param>, ret: TypeAnn) ->
         body: Block {
             stmts: Vec::new(),
             span: builtin_span(),
+            header_comment: None,
         },
         leading_comments: Vec::new(),
         doc_comment: None,
@@ -139,6 +141,7 @@ fn result_enum() -> EnumDecl {
         ],
         leading_comments: Vec::new(),
         doc_comment: None,
+        header_comment: None,
         span: builtin_span(),
     }
 }
@@ -155,6 +158,7 @@ fn option_enum() -> EnumDecl {
         ],
         leading_comments: Vec::new(),
         doc_comment: None,
+        header_comment: None,
         span: builtin_span(),
     }
 }
@@ -181,6 +185,7 @@ fn value_enum() -> EnumDecl {
         ],
         leading_comments: Vec::new(),
         doc_comment: None,
+        header_comment: None,
         span: builtin_span(),
     }
 }

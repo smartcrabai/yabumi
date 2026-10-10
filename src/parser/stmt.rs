@@ -24,6 +24,7 @@ impl Parser<'_> {
             return Block {
                 stmts: Vec::new(),
                 span: start_span,
+                header_comment: None,
             };
         }
         self.bump(); // Indent
@@ -43,6 +44,7 @@ impl Parser<'_> {
         Block {
             stmts,
             span: span_between(start_span, end_span),
+            header_comment: None,
         }
     }
 
@@ -217,6 +219,7 @@ impl Parser<'_> {
             ElseBranch::Block(Block {
                 stmts: Vec::new(),
                 span,
+                header_comment: None,
             })
         };
         let end_span = self.previous_span();
@@ -247,6 +250,7 @@ impl Parser<'_> {
                     trailing_comment: None,
                 }],
                 span,
+                header_comment: None,
             }
         }
     }

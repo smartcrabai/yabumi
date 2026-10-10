@@ -156,11 +156,12 @@ src/
     comments.rs                  — Side-channel collection of comments/doc comments (shared input for fmt and doctest extraction)
   ast/
     mod.rs                       — Re-exports, NodeId definition
-    expr.rs                      — Expr, ExprKind, Arg, PipeExpr, LambdaParam
+    expr.rs                      — Expr, ExprKind, Arg, PipeExpr, LambdaParam, ListComments, AttachedListComments
     stmt.rs                      — Stmt, StmtKind, Block
     decl.rs                      — FunctionDecl, StructDecl, EnumDecl, EnumVariant, Param, SelfParam, DocComment, DocFence, Module, Item
     pattern.rs                   — Pattern, SubPattern, LiteralPat
     ty_ann.rs                    — TypeAnn, TypeAnnKind (syntactic type annotations; distinct from the Ty in §3)
+    end_line.rs                  — `true_end_line_of_*`: a node's real last-token line; shared by comment_attach and printer (§5.9)
   parser/
     mod.rs                       — Recursive-descent parser core, Parser struct, error-recovery policy
     expr.rs                      — Pratt-style expression parser (D-OP-01 precedence table)
@@ -168,7 +169,7 @@ src/
     decl.rs                      — Declaration parser for def/struct/enum/constants
     pattern.rs                   — match pattern parser (D-SYN-06's nesting constraint enforced via types, §3.5)
     ty_ann.rs                    — Type annotation parser
-    comment_attach.rs            — Attaches side-channel comments to the AST (leading/trailing) by matching line numbers
+    comment_attach.rs            — Attaches side-channel comments to AST nodes by line number (leading/trailing, header_comment, ListComments; §5.9)
   module_resolve/
     mod.rs                       — Enumerates `.ybm` files in the same directory, determines module directives, builds the Program skeleton
     flat_namespace.rs             — Registers all declarations into a single flat namespace, detects E1001
@@ -610,6 +611,7 @@ pub struct StructDecl {
     pub fields: Vec<Param>,             // Reuses Param (name: ty). Declaration order = field index
     pub methods: Vec<FunctionDecl>,      // self_param is always Some
     pub doc_comment: Option<DocComment>,
+    pub header_comment: Option<String>,   // Trailing comment on the `struct` line (§5.9)
     pub span: Span,
 }
 
@@ -619,6 +621,7 @@ pub struct EnumDecl {
     pub generics: Vec<Arc<str>>,
     pub variants: Vec<EnumVariant>,
     pub doc_comment: Option<DocComment>,
+    pub header_comment: Option<String>,   // Trailing comment on the `enum` line (§5.9)
     pub span: Span,
 }
 
@@ -673,10 +676,10 @@ pub enum ExprKind {
 
     Ident(Arc<str>),
 
-    ListLit { elements: Vec<Expr>, was_multiline: bool },
-    DictLit { entries: Vec<(Expr, Expr)>, was_multiline: bool },
-    SetLit { elements: Vec<Expr>, was_multiline: bool },
-    TupleLit { elements: Vec<Expr>, was_multiline: bool }, // A single element requires a trailing comma (D-TYPE-01), already checked by the parser
+    ListLit { elements: Vec<Expr>, was_multiline: bool, comments: ListComments },
+    DictLit { entries: Vec<(Expr, Expr)>, was_multiline: bool, comments: ListComments },
+    SetLit { elements: Vec<Expr>, was_multiline: bool, comments: ListComments },
+    TupleLit { elements: Vec<Expr>, was_multiline: bool, comments: ListComments }, // A single element requires a trailing comma (D-TYPE-01), already checked by the parser
 
     Unary { op: UnaryOp, operand: Box<Expr> },
     Binary { op: BinaryOp, lhs: Box<Expr>, rhs: Box<Expr> },
@@ -685,8 +688,8 @@ pub enum ExprKind {
     /// construction (`Ident "(" arglist ")"` has the same shape for all three —
     /// decision made in this document, elaborated at the end of §3.4). Which meaning
     /// applies is settled by the type-checking phase from the name resolution of `callee`.
-    Call { callee: Box<Expr>, type_args: Vec<TypeAnn>, args: Vec<Arg>, was_multiline: bool },
-    MethodCall { receiver: Box<Expr>, method: Arc<str>, type_args: Vec<TypeAnn>, args: Vec<Arg>, was_multiline: bool },
+    Call { callee: Box<Expr>, type_args: Vec<TypeAnn>, args: Vec<Arg>, was_multiline: bool, comments: ListComments },
+    MethodCall { receiver: Box<Expr>, method: Arc<str>, type_args: Vec<TypeAnn>, args: Vec<Arg>, was_multiline: bool, comments: ListComments },
 
     FieldAccess { target: Box<Expr>, field: Arc<str> },
     TupleIndex { target: Box<Expr>, index: u32 },        // `t.0` (the parser validates the numeric token)
@@ -694,10 +697,10 @@ pub enum ExprKind {
     Question { target: Box<Expr> },                        // `expr?`
 
     Pipe(PipeExpr),
-    Lambda { params: Vec<LambdaParam>, body: Box<Expr> },
+    Lambda { params: Vec<LambdaParam>, body: Box<Expr>, header_comment: Option<String> },
     If(Box<IfExpr>),
-    Match { scrutinee: Box<Expr>, arms: Vec<MatchArm> },
-    Par { kind: ParKind, elements: Vec<Expr> },             // `par [..]` / `par (..)`
+    Match { scrutinee: Box<Expr>, arms: Vec<MatchArm>, header_comment: Option<String> },
+    Par { kind: ParKind, elements: Vec<Expr>, comments: ListComments },             // `par [..]` / `par (..)`
 
     Grouping(Box<Expr>),   // `(expr)`. Kept in the AST distinctly from a tuple (for fmt's reproducibility)
 }
@@ -714,6 +717,20 @@ pub struct Arg {
     pub is_placeholder: bool,   // The pipe's `_` (meaningful only when Arg is used as a plain function-call argument)
 }
 
+/// Comments inside a bracketed element or argument list (§5.9). Set by `comment_attach`.
+pub struct ListComments {
+    pub open_line: u32,                              // Line of the opening bracket (`[`, `{`, `(`)
+    pub attached: Option<Box<AttachedListComments>>, // None when no comment lies inside the brackets
+}
+
+/// `leading`/`trailing` are exactly parallel to the list's elements (dict: entries; call: args).
+pub struct AttachedListComments {
+    pub open: Option<String>,              // Trailing comment on the opening-bracket line (`foo( # c`)
+    pub leading: Vec<Vec<LeadingComment>>, // Standalone comment lines before each element (LeadingComment: §3.4 decl.rs)
+    pub trailing: Vec<Option<String>>,     // Comment on each element's line, after its comma
+    pub closing: Vec<LeadingComment>,      // Standalone comment lines after the last element
+}
+
 pub struct PipeExpr {
     pub source: Box<Expr>,
     pub stages: Vec<PipeStage>,
@@ -727,7 +744,7 @@ pub struct PipeStage {
 
 pub enum PipeCallee {
     Bare(Expr),                                     // Bare name: `x |> json.encode`
-    WithArgs { callee: Box<Expr>, args: Vec<Arg> },   // A call including `_`. A syntax error (E0503) if
+    WithArgs { callee: Box<Expr>, args: Vec<Arg>, comments: ListComments },   // A call including `_`. A syntax error (E0503) if
                                                         // not even one arg has `is_placeholder` — checked by the parser
 }
 
@@ -793,6 +810,7 @@ pub struct Block {
     /// across two contexts, and the caller — the if/match check in check_stmt.rs,
     /// or the function-body check in check_decl.rs — chooses which one applies).
     pub stmts: Vec<Stmt>,
+    pub header_comment: Option<String>,   // Trailing comment on the line opening this indented body (§5.9)
     pub span: Span,
 }
 
@@ -1853,11 +1871,24 @@ Points worth noting:
 To guarantee idempotence (fmt . fmt = fmt), **all that needs guaranteeing is that every normalization decision is uniquely determined by its input** — AST regeneration inherently has this property (the same AST always produces the same text). The one thing to watch for is that **some rules cannot be reproduced unless the AST itself retains part of the original source's shape**:
 
 1. **D-FMT-05 (the trigger for multi-line expansion)**: "was there one or more newlines between the opening and closing bracket" is a **syntactic fact** that cannot be reconstructed from the AST's semantic structure (what the list's elements are). So, as shown in §3.4, `ListLit`/`DictLit`/`SetLit`/`TupleLit`/`Call`/`MethodCall` carry a `was_multiline: bool` — just a single bit recording whether the parser consumed a `Newline` token between the open and close brackets in the original source. Idempotence holds as follows: when fmt sees `was_multiline=true` and formats it across multiple lines (one element per line), the **output itself** then genuinely contains a newline between the open and close brackets. Reparsing this output, the parser again observes `was_multiline=true` — so a second run of fmt makes the same decision. The single-line case is symmetric (no newline in the output means `false` on reparse too). By keeping just this one bit of input-dependent information — "did the source originally have a newline" — in the AST, the idempotence rationale D-FMT-05 itself states ("the same input always yields the same output") is faithfully reproduced even under the AST-regeneration approach.
-2. **Comment preservation**: lexing never discards comments (a standalone `#` line, a trailing comment, an ordinary non-doc comment) — `comments.rs` collects them as a side channel (§2.1). The parser (`comment_attach.rs`) looks at each comment's line number and attaches it either as `leading_comments: Vec<String>` on the very next AST construct (`Stmt`/`MatchArm`/`EnumVariant`, etc.), or as `trailing_comment: Option<String>` on a construct whose preceding token is on the same line (already defined as real fields on `Stmt`/`MatchArm`/`EnumVariant` in §3.4). `##` doc comments (`DocComment` in §3.4) are already designed as a target of this same attachment process, covering `FunctionDecl`/`StructDecl`/`EnumDecl` as well as `Stmt` (limited to `StmtKind::NameAssign`, the DOC-COMMENT-MISSING-ON-STMT-LEVEL-CONST decision, §8) — **this mechanism of "attaching a comment to a following/same-line AST node by line number" is the single, shared implementation behind both D-DOC-03 (determining which declaration a doc comment targets) and fmt's general comment preservation**. When fmt's `printer.rs` formats each node, it prefixes it with a formatted `# ` + one space (D-FMT-03) if `leading_comments` exist, and suffixes it the same way at end of line if `trailing_comment` exists.
-3. **Excluding code inside doc fences (D-FMT-06)**: `DocFence.raw_text` is preserved verbatim as raw text, and when `printer.rs` outputs a `DocComment`, it formats `prose_lines` like an ordinary comment, but outputs each `DocFence`'s `raw_text` completely unchanged, byte for byte. This means fence code is preserved exactly as written even if it isn't in canonical form, even after formatting.
-4. **A known limitation** (elaborated in the R8 decision, §8): **comments between elements of a literal or argument list are not supported**. The comment-attachment mechanism above only gives `leading_comments`/`trailing_comment` to statement-level nodes that could plausibly have a comment before or after them, such as `Stmt`/`MatchArm`/`EnumVariant`. There is no mechanism to preserve a comment placed **between elements** of a multi-line `list`/`dict`/`set`/`tuple` literal or a function call's argument list (e.g. `[\n  1,  # first\n  2,  # second\n]`) — the elements of `ExprKind::ListLit` etc. are a raw `Vec<Expr>` with no per-element comment field. No sample under samples/fmt/ exercises this case, so it has no impact on the acceptance tests, and it is deliberately accepted as out of scope for v1. Should it become necessary later, this can be addressed by extending the element type of `Arg` or of each literal from `Expr` to a small wrapper type of "`Expr` + 2 comment fields" (an extension point deliberately left open without significantly reshaping the existing AST).
+2. **Comment preservation**: lexing never discards comments (a standalone `#` line, a trailing comment, an ordinary non-doc comment) — `comments.rs` collects them as a side channel (§2.1). `comment_attach.rs` runs after parsing and assigns each comment to an AST node by line number. A node's extent is its real last-token line, taken from the `true_end_line_of_*` helpers in `ast/end_line.rs` (shared with `printer.rs`); the parser's `Block` span cannot be used for this, because it ends on the line of the next sibling, and using it would attach a trailing comment on the line after an `if`/`else` or block-bodied match arm to the last line of the previous block. Each node is processed in the order **leading → trailing → recurse into children**, so a trailing comment goes to the outermost node that ends on its line: in `xs.map((v) =>` … `2) # c`, the comment follows the `)` and belongs to the statement, not to the nested `2` (attaching it to `2` would print it before the `)` and comment the bracket out). Attachment targets are:
+   - `leading_comments: Vec<String>` and `trailing_comment: Option<String>` on the statement-level nodes `Stmt`/`MatchArm`/`EnumVariant` (§3.4).
+   - `header_comment: Option<String>`, the trailing comment on a line that opens an indented body: `Block.header_comment` (a `def` signature, `if cond`, `else`, a block match arm's `pattern =>`), `StructDecl.header_comment`, `EnumDecl.header_comment`, `ExprKind::Match.header_comment` (`match x # c`), and `ExprKind::Lambda.header_comment` (`(x) => # c` whose body starts on the next line).
+   - `ListComments` on the list-like nodes, for comments inside their brackets (item 4).
 
-`printer.rs` recursively walks the entire AST, applying as fixed rules: D-FMT-01 (spacing around operators/commas/colons), D-FMT-02 (strings are always double-quoted), D-FMT-03 (comment spacing), D-FMT-04 (one pipe stage per line), and D-TYPE-02 (trailing comma when multi-line) — none of these branch on the input (D-FMT-05 alone is the exception requiring the one bit of input-dependent information, `was_multiline`), so they are trivially idempotent.
+   `##` doc comments (`DocComment` in §3.4) are already designed as a target of this same attachment process, covering `FunctionDecl`/`StructDecl`/`EnumDecl` as well as `Stmt` (limited to `StmtKind::NameAssign`, the DOC-COMMENT-MISSING-ON-STMT-LEVEL-CONST decision, §8) — **this mechanism of "attaching a comment to a following/same-line AST node by line number" is the single, shared implementation behind both D-DOC-03 (determining which declaration a doc comment targets) and fmt's general comment preservation**. When `printer.rs` formats a node, it emits `leading_comments` before the node and `trailing_comment`/`header_comment` at the end of its line, each as `# ` plus the text (D-FMT-03).
+3. **Excluding code inside doc fences (D-FMT-06)**: `DocFence.raw_text` is preserved verbatim as raw text, and when `printer.rs` outputs a `DocComment`, it formats `prose_lines` like an ordinary comment, but outputs each `DocFence`'s `raw_text` completely unchanged, byte for byte. This means fence code is preserved exactly as written even if it isn't in canonical form, even after formatting.
+4. **Comments inside bracketed lists and argument lists** are stored on the node that owns the brackets, as `ListComments { open_line, attached }` (§3.4): `open_line` is the line of the opening bracket, and `attached` is `None` when no comment lies inside the brackets (the common case, allocation-free). Otherwise `AttachedListComments { open, leading, trailing, closing }` holds:
+   - `open`: trailing comment on the opening-bracket line when the first element starts on a later line (`foo( # c`).
+   - `leading[i]`: standalone comment lines before element `i`.
+   - `trailing[i]`: comment on element `i`'s line, after its comma.
+   - `closing`: standalone comment lines after the last element, before the closing bracket.
+
+   `leading` and `trailing` are exactly parallel to the elements (dict: entries; call, method call, and pipe stage: args). `fmt` prints any list with `attached.is_some()` in expanded form (one element per line, trailing comma, each comment in place), regardless of element count or `was_multiline`.
+
+   Positions not preserved in place are relocated rather than kept: a comment at the end of a method-chain or pipe continuation line, inside a multi-line `def` parameter list or a lambda parameter list, between a dict key and its value, and in type arguments, index brackets, patterns, or grouping parens. These are never dropped; each becomes a standalone comment line before the next statement-level node (for a `def` parameter list, the first statement of the body).
+
+`printer.rs` recursively walks the entire AST, applying as fixed rules: D-FMT-01 (spacing around operators/commas/colons), D-FMT-02 (strings are always double-quoted), D-FMT-03 (comment spacing), D-FMT-04 (one pipe stage per line), and D-TYPE-02 (trailing comma when multi-line) — none of these branch on the input (D-FMT-05 alone is the exception requiring the one bit of input-dependent information, `was_multiline`; the expanded form for lists with attached comments, item 4, is likewise determined solely by the AST), so they are trivially idempotent.
 
 ### 5.10 Standalone execution of doctests
 
@@ -2164,7 +2195,7 @@ All 16 findings raised in the adversarial review (3 blocker, 8 major, 5 minor, o
 - **R4 (parser recursion depth)**: Adopted. Established §5.11, introducing a guard of the same shape as the evaluator's `DepthGuard` (a `depth` field on the `Parser` struct; no `thread_local!` needed), designed so that exceeding the threshold reuses the existing E0502 (no new diagnostic code is added).
 - **R6 (StructInstance derive Clone)**: Adopted. Corrected to `#[derive(Debug, Clone, PartialEq)]` (§3.9).
 - **R7 (Value's PartialEq and Closure comparison)**: Adopted. Clarified the reference to a hand-written implementation, and spelled out explicitly the rule that comparing two `Value::Closure`s always returns `false` (never `true`, even reflexively against itself) — on the grounds that an `==` comparison, where an unconstrained type parameter `T` has been unified to a function type, is theoretically reachable, a fixed `false` was adopted rather than `unreachable!()` (§3.9).
-- **R8 (fmt not supporting comments inside a literal's interior)**: Adopted. Documented as a known limitation in §5.9 — no structural change was made; it was simply documented as deliberately out of scope for v1 (judged to need no implementation change, since samples/ has no test exercising this case).
+- **R8 (fmt not supporting comments inside a literal's interior)**: Adopted. Documented as a known limitation in §5.9 — no structural change was made; it was simply documented as deliberately out of scope for v1 (judged to need no implementation change, since samples/ has no test exercising this case). **Current state**: superseded. The limitation was later resolved by the `ListComments` wrapper on the node (§5.9 item 4), the extension point this entry anticipated. Positions still not preserved in place are listed in §5.9 item 4.
 - **R9 (where the call-depth counter lives)**: Adopted. Adopted a thread-local counter via `thread_local!` (§5.7) — since each `par` worker thread has its own independent, brand-new 64MiB stack, depth should likewise start independently from zero, and this was judged superior to adding a field to `Environment` (the alternative the finding presented) in that it avoids introducing a depth argument into `call_function`'s signature at all.
 
 ### Items added in this revision that weren't in the critique

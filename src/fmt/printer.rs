@@ -11,11 +11,16 @@
 //! same blank-line-preservation logic can be used to write top-level items, function
 //! bodies, if/else blocks, match arms, struct bodies, and enum variant lists alike.
 
+use crate::ast::end_line::{
+    true_end_line_of_enum_decl, true_end_line_of_function_decl, true_end_line_of_match_arm,
+    true_end_line_of_stmt, true_end_line_of_struct_decl,
+};
 use crate::ast::{
-    Arg, BinaryOp, Block, Decl, DocComment, ElseBranch, EnumDecl, EnumVariant, Expr, ExprKind,
-    FStringSegment, FunctionDecl, IfExpr, Item, LambdaParam, LeadingComment, LiteralPat, MatchArm,
-    MatchArmBody, Module, ParKind, Param, Pattern, PipeCallee, PipeExpr, PipeStage, Stmt, StmtKind,
-    StructDecl, SubPattern, TypeAnn, TypeAnnKind, UnaryOp,
+    Arg, AttachedListComments, BinaryOp, Block, Decl, DocComment, ElseBranch, EnumDecl,
+    EnumVariant, Expr, ExprKind, FStringSegment, FunctionDecl, IfExpr, Item, LambdaParam,
+    LeadingComment, ListComments, LiteralPat, MatchArm, MatchArmBody, Module, ParKind, Param,
+    Pattern, PipeCallee, PipeExpr, PipeStage, Stmt, StmtKind, StructDecl, SubPattern, TypeAnn,
+    TypeAnnKind, UnaryOp,
 };
 use crate::fmt::doc_fence;
 use std::sync::Arc;
@@ -174,10 +179,7 @@ fn assemble_with_leading_trailing(
         prev_line = Some(d.span.end.line);
     }
     push_blank_if_gap(&mut lines, prev_line, core_start_line);
-    let core = match trailing {
-        Some(t) => format!("{core} {}", format_comment_line(t)),
-        None => core,
-    };
+    let core = format!("{core}{}", trailing_suffix(trailing));
     lines.push(core);
     join_first_unindented(&lines, indent)
 }
@@ -194,6 +196,12 @@ fn format_comment_line(text: &str) -> String {
     }
 }
 
+/// The ` # text` appended after a line's code when there is a trailing comment (D-FMT-03
+/// spacing), or nothing.
+fn trailing_suffix(trailing: Option<&String>) -> String {
+    trailing.map_or_else(String::new, |t| format!(" {}", format_comment_line(t)))
+}
+
 /// Splits the (unindented) multi-line string returned by `doc_fence::render_doc_comment`
 /// into the `Vec<String>` (a list of elements each containing no newline) that can be mixed
 /// into `leading_lines` for `Stmt`/`FunctionDecl` etc.
@@ -202,92 +210,6 @@ fn render_doc_comment_lines(doc: &DocComment) -> Vec<String> {
         .lines()
         .map(str::to_owned)
         .collect()
-}
-
-// ---------------------------------------------------------------------------
-// Recomputing the actual final token line (working around a known quirk on the parser side)
-// ---------------------------------------------------------------------------
-//
-// `parser/stmt.rs::parse_block` decides `Block.span.end` via `self.previous_span()`
-// **after** `self.bump()`-ing the `Dedent` token (a file out of scope here, and its code is
-// left unchanged). Because the synthesized `Dedent` token's span points at the next
-// non-blank line (= the start of the next sibling element, or further still if blank lines
-// follow), the `.span.end.line` of a `Block` / the `FunctionDecl`/`StructDecl`/`EnumDecl`/
-// `MatchArm` (a block body) / `IfExpr` (when the else is a block) containing it ends up
-// pointing not at "the line of the actual final token" but at "the line of the next
-// sibling element." If D-SYN-02's blank-line-preservation logic (the gap computation) uses
-// this tainted `.span.end.line` directly, it ends up inserting a blank line in a spot where
-// there should genuinely be none (confirmed to actually occur in samples/ok/7-5_assert —
-// noted in the report as needing follow-up). What follows recomputes "the line of the
-// actual final token" recursively, dedicated to this sibling-gap computation.
-// (Expressions that don't pass through a block (Call/MethodCall/a string literal etc.) have
-// their span decided by an actual token such as `)`, so they aren't tainted and
-// `expr.span.end.line` remains correct as-is.)
-
-fn true_end_line_of_stmt(stmt: &Stmt) -> u32 {
-    match &stmt.kind {
-        StmtKind::VarDecl { value, .. }
-        | StmtKind::NameAssign { value, .. }
-        | StmtKind::FieldAssign { value, .. }
-        | StmtKind::IndexAssign { value, .. }
-        | StmtKind::Discard(value)
-        | StmtKind::ExprStmt(value)
-        | StmtKind::Return(Some(value)) => true_end_line_of_expr(value),
-        StmtKind::Return(None) => stmt.span.start.line,
-    }
-}
-
-fn true_end_line_of_expr(expr: &Expr) -> u32 {
-    match &expr.kind {
-        ExprKind::If(if_expr) => true_end_line_of_if(if_expr),
-        ExprKind::Match { arms, .. } => arms
-            .last()
-            .map_or(expr.span.start.line, true_end_line_of_match_arm),
-        ExprKind::Lambda { body, .. } => true_end_line_of_expr(body),
-        ExprKind::Grouping(inner) => true_end_line_of_expr(inner),
-        _ => expr.span.end.line,
-    }
-}
-
-fn true_end_line_of_if(if_expr: &IfExpr) -> u32 {
-    match &if_expr.else_branch {
-        ElseBranch::Block(block) => true_end_line_of_block(block),
-        ElseBranch::ElseIf(inner) => true_end_line_of_if(inner),
-    }
-}
-
-fn true_end_line_of_block(block: &Block) -> u32 {
-    block
-        .stmts
-        .last()
-        .map_or(block.span.start.line, true_end_line_of_stmt)
-}
-
-fn true_end_line_of_match_arm(arm: &MatchArm) -> u32 {
-    match &arm.body {
-        MatchArmBody::Expr(e) => true_end_line_of_expr(e),
-        MatchArmBody::Block(block) => true_end_line_of_block(block),
-    }
-}
-
-fn true_end_line_of_function_decl(f: &FunctionDecl) -> u32 {
-    true_end_line_of_block(&f.body)
-}
-
-fn true_end_line_of_struct_decl(s: &StructDecl) -> u32 {
-    if let Some(m) = s.methods.last() {
-        true_end_line_of_function_decl(m)
-    } else if let Some(field) = s.fields.last() {
-        field.span.end.line
-    } else {
-        s.span.start.line
-    }
-}
-
-fn true_end_line_of_enum_decl(e: &EnumDecl) -> u32 {
-    e.variants
-        .last()
-        .map_or(e.span.start.line, |v| v.span.end.line)
 }
 
 // ---------------------------------------------------------------------------
@@ -406,7 +328,7 @@ fn print_function_decl(f: &FunctionDecl, indent: usize) -> String {
         &f.leading_comments,
         f.doc_comment.as_ref(),
         f.span.start.line,
-        None,
+        f.body.header_comment.as_ref(),
         indent,
         header,
     );
@@ -454,7 +376,7 @@ fn print_struct_decl(s: &StructDecl, indent: usize) -> String {
         &s.leading_comments,
         s.doc_comment.as_ref(),
         s.span.start.line,
-        None,
+        s.header_comment.as_ref(),
         indent,
         header,
     );
@@ -506,7 +428,7 @@ fn print_enum_decl(e: &EnumDecl, indent: usize) -> String {
         &e.leading_comments,
         e.doc_comment.as_ref(),
         e.span.start.line,
-        None,
+        e.header_comment.as_ref(),
         indent,
         header,
     );
@@ -666,21 +588,23 @@ fn print_expr(expr: &Expr, indent: usize) -> String {
         ExprKind::ListLit {
             elements,
             was_multiline,
-        } => print_bracket_list("[", "]", elements, *was_multiline, indent, print_expr),
+            comments,
+        } => print_elements(("[", "]"), elements, *was_multiline, comments, indent),
         ExprKind::DictLit {
             entries,
             was_multiline,
-        } => print_bracket_list("{", "}", entries, *was_multiline, indent, |pair, ind| {
-            format!("{}: {}", print_expr(&pair.0, ind), print_expr(&pair.1, ind))
-        }),
+            comments,
+        } => print_dict_lit(entries, *was_multiline, comments, indent),
         ExprKind::SetLit {
             elements,
             was_multiline,
-        } => print_bracket_list("{", "}", elements, *was_multiline, indent, print_expr),
+            comments,
+        } => print_elements(("{", "}"), elements, *was_multiline, comments, indent),
         ExprKind::TupleLit {
             elements,
             was_multiline,
-        } => print_tuple_lit(elements, *was_multiline, indent),
+            comments,
+        } => print_tuple_lit(elements, *was_multiline, comments, indent),
         ExprKind::Unary { op, operand } => match op {
             UnaryOp::Neg => format!("-{}", print_expr(operand, indent)),
             UnaryOp::Not => format!("not {}", print_expr(operand, indent)),
@@ -696,25 +620,22 @@ fn print_expr(expr: &Expr, indent: usize) -> String {
             type_args,
             args,
             was_multiline,
-        } => format!(
-            "{}{}{}",
-            print_expr(callee, indent),
-            print_type_args(type_args),
-            print_args_paren(args, *was_multiline, indent)
-        ),
+            comments,
+        } => print_call(callee, type_args, args, *was_multiline, comments, indent),
         ExprKind::MethodCall {
             receiver,
             method,
             type_args,
             args,
             was_multiline,
+            comments,
         } => print_method_call_chain(
-            expr,
             receiver,
             method,
             type_args,
             args,
             *was_multiline,
+            comments,
             indent,
         ),
         ExprKind::FieldAccess { target, field } => {
@@ -732,16 +653,91 @@ fn print_expr(expr: &Expr, indent: usize) -> String {
         }
         ExprKind::Question { target } => format!("{}?", print_expr(target, indent)),
         ExprKind::Pipe(pipe) => print_pipe(pipe, indent),
-        ExprKind::Lambda { params, body } => print_lambda(params, body, indent),
+        ExprKind::Lambda {
+            params,
+            body,
+            header_comment,
+        } => print_lambda(params, body, header_comment.as_ref(), indent),
         ExprKind::If(if_expr) => print_if_expr(if_expr, indent),
-        ExprKind::Match { scrutinee, arms } => format!(
-            "match {}\n{}",
-            print_expr(scrutinee, indent),
-            print_match_arms(arms, indent + 4)
-        ),
-        ExprKind::Par { kind, elements } => print_par(kind, elements, indent),
+        ExprKind::Match {
+            scrutinee,
+            arms,
+            header_comment,
+        } => print_match(scrutinee, arms, header_comment.as_ref(), indent),
+        ExprKind::Par {
+            kind,
+            elements,
+            comments,
+        } => print_par(kind, elements, comments, indent),
         ExprKind::Grouping(inner) => format!("({})", print_expr(inner, indent)),
     }
+}
+
+/// A list/set/tuple/`par` literal, written between `brackets` (`("[", "]")`, `("par [", "]")`...).
+fn print_elements(
+    brackets: (&str, &str),
+    elements: &[Expr],
+    was_multiline: bool,
+    comments: &ListComments,
+    indent: usize,
+) -> String {
+    print_bracket_list(
+        brackets,
+        elements,
+        was_multiline,
+        comments,
+        indent,
+        expr_start_line,
+        print_expr,
+    )
+}
+
+fn print_dict_lit(
+    entries: &[(Expr, Expr)],
+    was_multiline: bool,
+    comments: &ListComments,
+    indent: usize,
+) -> String {
+    print_bracket_list(
+        ("{", "}"),
+        entries,
+        was_multiline,
+        comments,
+        indent,
+        |pair| pair.0.span.start.line,
+        |pair, ind| format!("{}: {}", print_expr(&pair.0, ind), print_expr(&pair.1, ind)),
+    )
+}
+
+fn print_call(
+    callee: &Expr,
+    type_args: &[TypeAnn],
+    args: &[Arg],
+    was_multiline: bool,
+    comments: &ListComments,
+    indent: usize,
+) -> String {
+    format!(
+        "{}{}{}",
+        print_expr(callee, indent),
+        print_type_args(type_args),
+        print_args_paren(args, was_multiline, comments, indent)
+    )
+}
+
+/// `match scrutinee` (+ header comment) + the arm list (+4).
+fn print_match(
+    scrutinee: &Expr,
+    arms: &[MatchArm],
+    header_comment: Option<&String>,
+    indent: usize,
+) -> String {
+    format!(
+        "match {}{}\n{}",
+        print_expr(scrutinee, indent),
+        trailing_suffix(header_comment),
+        print_match_arms(arms, indent + 4)
+    )
 }
 
 /// The core of D-FMT-05 (plus D-TYPE-02's trailing comma): 0 or 1 elements are always
@@ -752,14 +748,26 @@ fn print_expr(expr: &Expr, indent: usize) -> String {
 /// argument whose body spans multiple lines via if/match," a judgment call made in this
 /// printer implementation). With 2 or more elements and was_multiline, expands to one
 /// element per line + trailing comma.
+/// A list carrying attached comments is always expanded instead (see `print_attached_list`).
 fn print_bracket_list<T>(
-    open: &str,
-    close: &str,
+    (open, close): (&str, &str),
     items: &[T],
     was_multiline: bool,
+    comments: &ListComments,
     indent: usize,
+    item_start_line: impl Fn(&T) -> u32,
     print_item: impl Fn(&T, usize) -> String,
 ) -> String {
+    if let Some(attached) = &comments.attached {
+        return print_attached_list(
+            (open, close),
+            items,
+            attached,
+            indent,
+            item_start_line,
+            print_item,
+        );
+    }
     match items.len() {
         0 => format!("{open}{close}"),
         1 => format!("{open}{}{close}", print_item(&items[0], indent)),
@@ -787,18 +795,83 @@ fn print_bracket_list<T>(
     }
 }
 
+/// The expanded form of a list with attached comments (§5.9): the opening bracket (with its
+/// trailing comment, if any), one element per line with its standalone comment lines before it
+/// and its comma plus trailing comment after it, the closing comment lines, then the closing
+/// bracket.
+fn print_attached_list<T>(
+    (open, close): (&str, &str),
+    items: &[T],
+    attached: &AttachedListComments,
+    indent: usize,
+    item_start_line: impl Fn(&T) -> u32,
+    print_item: impl Fn(&T, usize) -> String,
+) -> String {
+    let pad_inner = " ".repeat(indent + 4);
+    let mut s = format!("{open}{}\n", trailing_suffix(attached.open.as_ref()));
+    for (i, item) in items.iter().enumerate() {
+        let core = format!("{},", print_item(item, indent + 4));
+        let rendered = assemble_with_leading_trailing(
+            &attached.leading[i],
+            None,
+            item_start_line(item),
+            attached.trailing[i].as_ref(),
+            indent + 4,
+            core,
+        );
+        s.push_str(&pad_inner);
+        s.push_str(&rendered);
+        s.push('\n');
+    }
+    for comment in &attached.closing {
+        s.push_str(&pad_inner);
+        s.push_str(&format_comment_line(&comment.text));
+        s.push('\n');
+    }
+    s.push_str(&" ".repeat(indent));
+    s.push_str(close);
+    s
+}
+
 /// Tuple-only: a single element always requires a trailing comma (D-TYPE-01, applied
-/// regardless of `was_multiline`).
-fn print_tuple_lit(elements: &[Expr], was_multiline: bool, indent: usize) -> String {
-    if elements.len() == 1 {
+/// regardless of `was_multiline`). A commented tuple takes the expanded form instead, which
+/// carries the comma itself.
+fn print_tuple_lit(
+    elements: &[Expr],
+    was_multiline: bool,
+    comments: &ListComments,
+    indent: usize,
+) -> String {
+    if elements.len() == 1 && comments.attached.is_none() {
         format!("({},)", print_expr(&elements[0], indent))
     } else {
-        print_bracket_list("(", ")", elements, was_multiline, indent, print_expr)
+        print_elements(("(", ")"), elements, was_multiline, comments, indent)
     }
 }
 
-fn print_args_paren(args: &[Arg], was_multiline: bool, indent: usize) -> String {
-    print_bracket_list("(", ")", args, was_multiline, indent, print_arg)
+fn print_args_paren(
+    args: &[Arg],
+    was_multiline: bool,
+    comments: &ListComments,
+    indent: usize,
+) -> String {
+    print_bracket_list(
+        ("(", ")"),
+        args,
+        was_multiline,
+        comments,
+        indent,
+        arg_start_line,
+        print_arg,
+    )
+}
+
+fn arg_start_line(arg: &Arg) -> u32 {
+    arg.value.span.start.line
+}
+
+fn expr_start_line(expr: &Expr) -> u32 {
+    expr.span.start.line
 }
 
 fn print_arg(arg: &Arg, indent: usize) -> String {
@@ -861,23 +934,30 @@ fn chain_break_prefix(
     }
 }
 
+/// `receiver` followed by the `.method(..)` link, broken onto a continuation line when the
+/// link's `.method(` sits on a later line than the receiver's end (D-SYN-05; the parser
+/// records the `(` line, which is the `.method` line, as `ListComments::open_line`). A broken
+/// link's multi-line arguments are indented relative to the continuation line, and an
+/// unbroken link stays on the receiver's line even when its arguments start on later lines
+/// (`xs.fold(` / `xs.map( # note`).
 fn print_method_call_chain(
-    expr: &Expr,
     receiver: &Expr,
     method: &str,
     type_args: &[TypeAnn],
     args: &[Arg],
     was_multiline: bool,
+    comments: &ListComments,
     indent: usize,
 ) -> String {
     let recv_str = print_expr(receiver, indent);
-    let args_str = print_args_paren(args, was_multiline, indent);
-    let type_args_str = print_type_args(type_args);
-    let link = format!(".{method}{type_args_str}{args_str}");
-    let first_line = args
-        .first()
-        .map_or(expr.span.end.line, |a| a.value.span.start.line);
-    match chain_break_prefix(receiver.span.end.line, first_line, indent) {
+    let prefix = chain_break_prefix(receiver.span.end.line, comments.open_line, indent);
+    let link_indent = if prefix.is_some() { indent + 4 } else { indent };
+    let link = format!(
+        ".{method}{}{}",
+        print_type_args(type_args),
+        print_args_paren(args, was_multiline, comments, link_indent)
+    );
+    match prefix {
         Some(prefix) => format!("{recv_str}{prefix}{link}"),
         None => format!("{recv_str}{link}"),
     }
@@ -923,14 +1003,16 @@ fn print_pipe(pipe: &PipeExpr, indent: usize) -> String {
 fn print_pipe_stage(stage: &PipeStage, indent: usize) -> String {
     let mut s = match &stage.callee {
         PipeCallee::Bare(e) => print_expr(e, indent),
-        PipeCallee::WithArgs { callee, args } => {
-            let args_str = args
-                .iter()
-                .map(|a| print_arg(a, indent))
-                .collect::<Vec<_>>()
-                .join(", ");
-            format!("{}({args_str})", print_expr(callee, indent))
-        }
+        // Stages stay inline unless comments force expansion (a stage has no `was_multiline`).
+        PipeCallee::WithArgs {
+            callee,
+            args,
+            comments,
+        } => format!(
+            "{}{}",
+            print_expr(callee, indent),
+            print_args_paren(args, false, comments, indent)
+        ),
     };
     if stage.question {
         s.push('?');
@@ -942,7 +1024,13 @@ fn print_pipe_stage(stage: &PipeStage, indent: usize) -> String {
 /// lines, D-SYN-10), this breaks the line immediately after `=>`; otherwise it continues on
 /// the same line (a distinction confirmed against `samples/ok/5-1_lambdas` — an ordinary
 /// value/pipe/chain etc. body always continues directly after `=> `).
-fn print_lambda(params: &[LambdaParam], body: &Expr, indent: usize) -> String {
+/// In the block form, a trailing comment on the `=>` line (`header_comment`) stays on that line.
+fn print_lambda(
+    params: &[LambdaParam],
+    body: &Expr,
+    header_comment: Option<&String>,
+    indent: usize,
+) -> String {
     let params_str = params
         .iter()
         .map(|p| match &p.ty {
@@ -953,7 +1041,11 @@ fn print_lambda(params: &[LambdaParam], body: &Expr, indent: usize) -> String {
         .join(", ");
     if is_block_shaped(body) {
         let pad = " ".repeat(indent + 4);
-        format!("({params_str}) =>\n{pad}{}", print_expr(body, indent + 4))
+        format!(
+            "({params_str}) =>{}\n{pad}{}",
+            trailing_suffix(header_comment),
+            print_expr(body, indent + 4)
+        )
     } else {
         format!("({params_str}) => {}", print_expr(body, indent))
     }
@@ -968,8 +1060,9 @@ fn is_block_shaped(e: &Expr) -> bool {
 /// (D-SYN-03's multi-branch), this recurses into the same shape.
 fn print_if_expr(if_expr: &IfExpr, indent: usize) -> String {
     let mut s = format!(
-        "if {}\n{}",
+        "if {}{}\n{}",
         print_expr(&if_expr.cond, indent),
+        trailing_suffix(if_expr.then_branch.header_comment.as_ref()),
         print_block(&if_expr.then_branch, indent + 4)
     );
     s.push('\n');
@@ -977,6 +1070,7 @@ fn print_if_expr(if_expr: &IfExpr, indent: usize) -> String {
     s.push_str("else");
     match &if_expr.else_branch {
         ElseBranch::Block(block) => {
+            s.push_str(&trailing_suffix(block.header_comment.as_ref()));
             s.push('\n');
             s.push_str(&print_block(block, indent + 4));
         }
@@ -1015,9 +1109,11 @@ fn print_match_arm(arm: &MatchArm, indent: usize) -> String {
     let pattern_str = print_pattern(&arm.pattern);
     let core = match &arm.body {
         MatchArmBody::Expr(e) => format!("{pattern_str} => {}", print_expr(e, indent)),
-        MatchArmBody::Block(block) => {
-            format!("{pattern_str} =>\n{}", print_block(block, indent + 4))
-        }
+        MatchArmBody::Block(block) => format!(
+            "{pattern_str} =>{}\n{}",
+            trailing_suffix(block.header_comment.as_ref()),
+            print_block(block, indent + 4)
+        ),
     };
     assemble_with_leading_trailing(
         &arm.leading_comments,
@@ -1029,17 +1125,14 @@ fn print_match_arm(arm: &MatchArm, indent: usize) -> String {
     )
 }
 
-/// `par [..]` / `par (..)` (`Par` has no `was_multiline`, so it is always one line).
-fn print_par(kind: &ParKind, elements: &[Expr], indent: usize) -> String {
-    let joined = elements
-        .iter()
-        .map(|e| print_expr(e, indent))
-        .collect::<Vec<_>>()
-        .join(", ");
-    match kind {
-        ParKind::List => format!("par [{joined}]"),
-        ParKind::Tuple => format!("par ({joined})"),
-    }
+/// `par [..]` / `par (..)`. `Par` has no `was_multiline`, so it stays on one line unless
+/// comments are attached, which always expands it.
+fn print_par(kind: &ParKind, elements: &[Expr], comments: &ListComments, indent: usize) -> String {
+    let brackets = match kind {
+        ParKind::List => ("par [", "]"),
+        ParKind::Tuple => ("par (", ")"),
+    };
+    print_elements(brackets, elements, false, comments, indent)
 }
 
 fn binary_op_str(op: BinaryOp) -> &'static str {
@@ -1419,6 +1512,34 @@ mod tests {
         );
     }
 
+    /// The trimmed text of every `#`/`##` comment in `src`, sorted.
+    fn comment_texts(src: &str) -> Vec<String> {
+        let (_tokens, comments, _diag) = Lexer::new(src, FileId(0)).tokenize();
+        let mut texts: Vec<String> = comments.iter().map(|c| c.text.trim().to_owned()).collect();
+        texts.sort();
+        texts
+    }
+
+    /// fmt may move a comment it cannot keep in place, but never drops or duplicates one.
+    #[test]
+    fn all_samples_keep_every_comment_under_fmt() {
+        let mut failures: Vec<String> = Vec::new();
+        for path in &discover_ybm_files(&sample_root()) {
+            let src = read_sample(path);
+            let Some(formatted) = format_file_text(&src) else {
+                continue;
+            };
+            if comment_texts(&src) != comment_texts(&formatted) {
+                failures.push(format!("{}:\n{formatted}", path.display()));
+            }
+        }
+        assert!(
+            failures.is_empty(),
+            "fmt changed the set of comments:\n{}",
+            failures.join("\n\n")
+        );
+    }
+
     /// Not a single byte of any `.ybm` under samples/ok/ changes when formatted (completion
     /// condition 2). Causes A through E have all been fixed (either by fixing fmt itself, or
     /// by overwriting non-canonical form on the samples side with fmt's output), so the
@@ -1454,5 +1575,150 @@ mod tests {
     fn formatter_preserves_field_trailing_and_interleaved_doc_comments() {
         let source = "## before\n## ```\n## assert(true)\n## ```\n## between\n## ```\n## assert(true)\n## ```\nstruct User\n    # field note\n    name: str # trailing\n\n# eof note\n";
         assert_eq!(format_source(source).as_deref(), Some(source));
+    }
+
+    #[test]
+    fn single_element_list_with_trailing_comment_is_expanded() {
+        let source = "x = [\n    1, # one\n]\n";
+        assert_eq!(format_source(source).as_deref(), Some(source));
+    }
+
+    #[test]
+    fn empty_list_keeps_its_closing_comment_inside_the_brackets() {
+        let source = "x = [\n    # nothing yet\n]\n";
+        assert_eq!(format_source(source).as_deref(), Some(source));
+    }
+
+    #[test]
+    fn call_argument_comments_stay_on_their_own_lines() {
+        let source = "y = f( # open\n    a, # first\n    # lead\n    b,\n    # close\n)\n";
+        assert_eq!(format_source(source).as_deref(), Some(source));
+    }
+
+    #[test]
+    fn def_struct_enum_and_if_else_header_comments_stay_on_their_lines() {
+        let source = concat!(
+            "def f(x: int): int # def\n",
+            "    return x\n",
+            "\n",
+            "struct P # struct\n",
+            "    v: int\n",
+            "\n",
+            "enum C # enum\n",
+            "    A\n",
+            "    B\n",
+            "\n",
+            "y = if c # if\n",
+            "    1\n",
+            "else # else\n",
+            "    2\n",
+        );
+        assert_eq!(format_source(source).as_deref(), Some(source));
+    }
+
+    #[test]
+    fn match_header_and_block_arm_comments_stay_in_place() {
+        let source = concat!(
+            "n = match x # head\n",
+            "    1 => # one\n",
+            "        m = 2\n",
+            "        m\n",
+            "    _ => 3 # three\n",
+        );
+        assert_eq!(format_source(source).as_deref(), Some(source));
+    }
+
+    #[test]
+    fn trailing_comment_after_if_statement_is_not_glued_to_its_block() {
+        let source = "y = if c\n    1\nelse\n    2\nz = 3 # zc\n";
+        assert_eq!(format_source(source).as_deref(), Some(source));
+    }
+
+    #[test]
+    fn comment_after_a_closing_bracket_stays_after_it() {
+        // The nested block ends on the same line as the `)`, but the comment follows the `)`;
+        // moving it before the `)` would comment the bracket out.
+        let in_statement = concat!(
+            "r = xs.map((v) =>\n",
+            "    match v\n",
+            "        1 => 10\n",
+            "        _ => 20).sum() # total\n",
+        );
+        assert_eq!(format_source(in_statement).as_deref(), Some(in_statement));
+        let in_argument = concat!(
+            "r = f(\n",
+            "    (v) =>\n",
+            "        if v\n",
+            "            1\n",
+            "        else\n",
+            "            2, # last\n",
+            "    3,\n",
+            ")\n",
+        );
+        assert_eq!(format_source(in_argument).as_deref(), Some(in_argument));
+    }
+
+    #[test]
+    fn lambda_header_comment_stays_on_the_arrow_line() {
+        let source = "ys = xs.map((x) => # lambda\n    if x > 1\n        x\n    else\n        0)\n";
+        assert_eq!(format_source(source).as_deref(), Some(source));
+    }
+
+    #[test]
+    fn comment_inside_single_line_list_forces_expansion() {
+        assert_eq!(
+            format_source("x = [1, # first\n    2]\n").as_deref(),
+            Some("x = [\n    1, # first\n    2,\n]\n")
+        );
+        // The comment follows the last element on its line, not the first.
+        assert_eq!(
+            format_source("x = [1, 2, # two\n    3]\n").as_deref(),
+            Some("x = [\n    1,\n    2, # two\n    3,\n]\n")
+        );
+    }
+
+    #[test]
+    fn nested_list_comments_stay_with_their_own_list() {
+        let source = concat!(
+            "xs = [ # outer\n",
+            "    [\n",
+            "        1, # inner\n",
+            "        2,\n",
+            "    ], # after inner\n",
+            "    [3],\n",
+            "]\n",
+        );
+        assert_eq!(format_source(source).as_deref(), Some(source));
+    }
+
+    #[test]
+    fn method_call_arguments_keep_the_link_on_its_own_line() {
+        // `.map(` on the receiver's line stays there even though its arguments start below.
+        let unbroken = "r = xs.map( # open\n    f,\n)\n";
+        assert_eq!(format_source(unbroken).as_deref(), Some(unbroken));
+        let multiline_args = "r = xs.fold(\n    0,\n    f,\n)\n";
+        assert_eq!(
+            format_source(multiline_args).as_deref(),
+            Some(multiline_args)
+        );
+        // A link on a continuation line indents its arguments from that line.
+        let broken = "r = xs\n    .map(\n        f, # each\n    )\n    .sum()\n";
+        assert_eq!(format_source(broken).as_deref(), Some(broken));
+    }
+
+    #[test]
+    fn expanded_one_element_tuple_keeps_its_comma() {
+        // Without the comma `( 1 )` would reparse as a grouping, changing the value's type.
+        let source = "t = (\n    1, # only\n)\n";
+        assert_eq!(format_source(source).as_deref(), Some(source));
+    }
+
+    #[test]
+    fn else_if_header_comment_stays_on_the_inner_if_line() {
+        assert_eq!(
+            format_source("y = if a # a\n    1\nelse if b # b\n    2\nelse # c\n    3\n")
+                .as_deref(),
+            Some("y = if a # a\n    1\nelse\n    if b # b\n        2\n    else # c\n        3\n")
+        );
     }
 }

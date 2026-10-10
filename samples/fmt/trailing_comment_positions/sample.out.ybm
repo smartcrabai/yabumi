@@ -1,0 +1,112 @@
+# Verifies: a `#` comment written after a block header (def, struct, enum, if, else,
+# match, block arm, lambda), after an element of a list/dict/set/tuple/par literal or call
+# argument list, or after a block-bodied if statement stays on the line it was written on.
+struct Point # header of a struct
+    x: int
+    y: int
+
+enum Shape # header of an enum
+    Circle(float)
+    Square(float)
+
+def area(shape: Shape): float # header of a def
+    return match shape # header of a match
+        Circle(radius) => radius * radius
+        Square(side) => # header of a block arm
+            doubled = side * side
+            doubled
+
+def grade(score: int): int
+    return match score
+        100 => # header of a block arm
+            bonus = score + 10
+            bonus
+        _ => 3 # three
+
+def double(value: int): int
+    return value * 2
+
+def add_pair(left: int, right: int): int
+    return left + right
+
+origin = Point(x: 3, y: 4)
+print(str(origin.x + origin.y))
+
+shape_area = area(Circle(2.0))
+print(str(shape_area))
+
+graded = grade(100)
+print(str(graded))
+
+limit = 7
+label = if limit > 5 # header of an if
+    "big"
+else # header of an else
+    "small"
+pad = 1 # after the if/else
+print(label)
+print(str(pad))
+
+signs = [1, -1].map((v) => # header of a lambda
+    if v > 0
+        "pos"
+    else
+        "neg")
+print(signs.join(","))
+
+numbers = [ # open of a list
+    # lead for one
+    1, # one
+    2,
+    # before the closing bracket
+]
+print(str(numbers.sum()))
+
+single = [
+    5, # only element
+]
+print(str(single.sum()))
+
+ages = {
+    "ann": 31, # first entry
+    # note for bo
+    "bo": 42,
+}
+print(str(ages.len()))
+
+flags = {
+    1, # set one
+    2,
+}
+print(str(flags.len()))
+
+pair = ( # open of a tuple
+    1, # left
+    "x", # right
+)
+print(str(pair.0))
+
+doubled_pair = par [ # open of a par
+    double(1), # first
+    double(2),
+]
+print(str(doubled_pair.sum()))
+
+sum_all = add_pair( # open of a call
+    1, # first argument
+    # lead before the second argument
+    2,
+)
+print(str(sum_all))
+
+piped = 5 |> add_pair( # open of a pipe stage
+    _, # placeholder
+    1,
+)
+print(str(piped))
+
+total = [1, 2].fold( # open of a method call
+    0,
+    (acc, n) => acc + n, # reducer
+)
+print(str(total))

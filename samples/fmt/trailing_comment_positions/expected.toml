@@ -1,0 +1,55 @@
+# Expected results for fmt/trailing_comment_positions
+# Verifies: SPEC §12, DECISIONS D-FMT-03 and D-FMT-05. A `#` comment written after a block
+# header (def, struct, enum, if, else, match, block arm, lambda), after an element of a
+# list/dict/set/tuple/par literal or call argument list (including a standalone comment line
+# before an element or before the closing bracket), or after a block-bodied if statement stays
+# on the line it was written on. A list or call carrying such a comment is expanded one element
+# per line, and fmt(fmt(x)) = fmt(x) holds.
+
+[[case]]
+id = "check_keeps_comments_on_their_source_positions"
+entry = "sample.in.ybm"
+cmd = "check"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = "sample.out.ybm"
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Each comment keeps the line it was written on: header comments stay after def/struct/enum/if/else/match/block-arm/lambda headers, list/dict/set/tuple/par/call elements keep their trailing comments after the comma, and standalone comment lines stay before their element or before the closing bracket. A list or call holding any such comment is expanded one element per line (including the 1-element list). The `pad = 1` statement after an if/else keeps its own trailing comment instead of gluing it to the else block's last line."
+
+[[case]]
+id = "check_diff_detects_noncanonical_comment_positions"
+entry = "sample.in.ybm"
+cmd = "check_diff"
+args = []
+stdin_file = ""
+exit_code = 1
+diagnostics = []
+fmt_diff_expected = true
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "The non-canonical form (no space after #, operator spacing such as radius*radius, extra spaces before trailing comments) is judged to have a diff, so ybm check exits 1 (D-CLI-02)."
+
+[[case]]
+id = "check_diff_idempotent_on_canonical_form"
+entry = "sample.out.ybm"
+cmd = "check_diff"
+args = []
+stdin_file = ""
+exit_code = 0
+diagnostics = []
+fmt_diff_expected = false
+fmt_result_file = ""
+stdout = { mode = "contains", value = "" }
+stderr = { mode = "contains", value = "" }
+doc_blocks = []
+requires_env = []
+notes = "Against sample.out.ybm, already in canonical form, there is no diff, so fmt(fmt(x)) = fmt(x) holds for every comment position."
