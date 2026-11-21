@@ -628,8 +628,7 @@ mod tests {
             .skip(1)
             .map(|chunk| ExpectedCase {
                 cmd: extract_field_line(chunk, "cmd")
-                    .map(|v| v.trim_matches('"').to_owned())
-                    .unwrap_or_default(),
+                    .map_or_default(|v| v.trim_matches('"').to_owned()),
                 exit_code: extract_field_line(chunk, "exit_code")
                     .and_then(|v| v.trim().parse::<i32>().ok())
                     .unwrap_or(-1),
