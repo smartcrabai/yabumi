@@ -61,19 +61,21 @@ mod tests {
     /// `tests/samples.rs` (this file is a unit test under `src/main.rs` and doesn't qualify --
     /// it would fail to compile with "not defined"). Instead, we derive the location of the
     /// `proc_fixture` binary, which sits alongside this same build under `target/<profile>/`,
-    /// relative to `current_exe()` (`target/<profile>/deps/ybm-<hash>`).
+    /// relative to `current_exe()`. Older Cargo placed test binaries in `target/<profile>/deps/`,
+    /// while Cargo 1.100+ places them in `target/<profile>/build/<pkg>/<hash>/out/`, so we walk
+    /// the ancestor directories and use the first `target/<profile>/proc_fixture` found.
     fn fixture_bin() -> std::path::PathBuf {
-        let mut dir = std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("."));
-        dir.pop(); // Drop the test binary's own file name.
-        if dir.ends_with("deps") {
-            dir.pop(); // target/<profile>/deps -> target/<profile>
-        }
         let name = if cfg!(windows) {
             "proc_fixture.exe"
         } else {
             "proc_fixture"
         };
-        dir.join(name)
+        let exe = std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("."));
+        exe.ancestors()
+            .skip(1)
+            .map(|dir| dir.join(name))
+            .find(|candidate| candidate.is_file())
+            .unwrap_or_else(|| std::path::PathBuf::from(name))
     }
 
     fn ok_fields(v: &Value) -> &[Value] {
