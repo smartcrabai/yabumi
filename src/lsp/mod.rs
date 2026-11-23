@@ -105,11 +105,7 @@ impl ServerState {
         overlay: &Overlay,
         writer: &mut impl Write,
     ) -> io::Result<()> {
-        let previous_paths = self
-            .analyses
-            .get(path)
-            .map(analysis_paths)
-            .unwrap_or_default();
+        let previous_paths = self.analyses.get(path).map_or_default(analysis_paths);
         let analysis = driver::analyze(path, overlay);
         let current_paths = analysis_paths(&analysis);
         let diagnostics = diagnostic_values(&analysis, self.encoding);
@@ -327,11 +323,7 @@ fn did_close(
     let Some(path) = document_path(params) else {
         return Ok(());
     };
-    let previous_paths = state
-        .analyses
-        .get(&path)
-        .map(analysis_paths)
-        .unwrap_or_default();
+    let previous_paths = state.analyses.get(&path).map_or_default(analysis_paths);
     state.docs.remove(&path);
     state.analyses.remove(&path);
     state.reanalyze_all(writer)?;

@@ -80,7 +80,6 @@ fn discover_sibling_modules(discovery_path: &Path, overlay: &Overlay) -> Vec<Pat
 /// number back out, so to let the in-process tests (the `tests` module) verify the result, the
 /// real logic converts to `bool` here before wrapping it in `ExitCode` (judgment call made in
 /// this file).
-#[must_use]
 pub fn run_pipeline(subcommand: &Subcommand) -> ExitCode {
     if matches!(subcommand, Subcommand::Lsp) {
         let stdin = std::io::stdin();

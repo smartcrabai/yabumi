@@ -133,8 +133,7 @@ fn table_to_case(table: &BTreeMap<String, TomlValue>) -> ExpectedCase {
         table
             .get(key)
             .and_then(TomlValue::as_str)
-            .map(str::to_string)
-            .unwrap_or_default()
+            .map_or_default(str::to_string)
     };
     let get_bool =
         |key: &str| -> bool { table.get(key).and_then(TomlValue::as_bool).unwrap_or(false) };
@@ -149,13 +148,12 @@ fn table_to_case(table: &BTreeMap<String, TomlValue>) -> ExpectedCase {
         table
             .get(key)
             .and_then(TomlValue::as_array)
-            .map(|arr| {
+            .map_or_default(|arr| {
                 arr.iter()
                     .filter_map(TomlValue::as_str)
                     .map(str::to_string)
                     .collect()
             })
-            .unwrap_or_default()
     };
     let get_stdio = |key: &str| -> StdioExpectation {
         let Some(t) = table.get(key).and_then(TomlValue::as_table) else {
@@ -168,14 +166,13 @@ fn table_to_case(table: &BTreeMap<String, TomlValue>) -> ExpectedCase {
         let value = t
             .get("value")
             .and_then(TomlValue::as_str)
-            .map(str::to_string)
-            .unwrap_or_default();
+            .map_or_default(str::to_string);
         StdioExpectation { mode, value }
     };
     let doc_blocks = table
         .get("doc_blocks")
         .and_then(TomlValue::as_array)
-        .map(|arr| {
+        .map_or_default(|arr| {
             arr.iter()
                 .filter_map(TomlValue::as_table)
                 .map(|t| DocBlockExpectation {
@@ -187,16 +184,14 @@ fn table_to_case(table: &BTreeMap<String, TomlValue>) -> ExpectedCase {
                     result: t
                         .get("result")
                         .and_then(TomlValue::as_str)
-                        .map(str::to_string)
-                        .unwrap_or_default(),
+                        .map_or_default(str::to_string),
                     code: t
                         .get("code")
                         .and_then(TomlValue::as_str)
                         .map(str::to_string),
                 })
                 .collect()
-        })
-        .unwrap_or_default();
+        });
 
     ExpectedCase {
         id: get_str("id"),

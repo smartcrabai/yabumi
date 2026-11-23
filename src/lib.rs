@@ -36,7 +36,6 @@ mod types;
 
 use std::process::ExitCode;
 
-#[must_use]
 pub fn main_entry() -> ExitCode {
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let subcommand = match cli::args::parse_args(&argv) {

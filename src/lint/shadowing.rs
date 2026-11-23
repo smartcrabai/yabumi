@@ -124,8 +124,7 @@ pub fn check(program: &Program, diagnostics: &mut DiagnosticBag) {
     let entry_top_level_names: HashSet<Arc<str>> = program
         .functions
         .get(crate::effects::ENTRY_POINT_NAME)
-        .map(|f| collect_outermost_names(f))
-        .unwrap_or_default();
+        .map_or_default(|f| collect_outermost_names(f));
 
     for f in program.functions.values() {
         if crate::stdlib::prelude::is_builtin_function(f) {
